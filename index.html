@@ -279,9 +279,9 @@
         let gameState = {};
 
         const materialMap = {
-            // Die Dateinamen und Größen entsprechen den Benutzerangaben
+            // HIER IST DIE KORREKTUR: "Holzbretter.png" wurde zu "Eichenholzbretter.png"
             'E': { name: 'Leer', fileName: 'Leer.png', size: '160x160', mcColor: '#8b8b8b' },
-            'W': { name: 'Holz', fileName: 'Holzbretter.png', size: '300x300', mcColor: '#a0522d' },
+            'W': { name: 'Holz', fileName: 'Eichenholzbretter.png', size: '300x300', mcColor: '#a0522d' }, // <-- Korrigierter Dateiname
             'C': { name: 'Stein', fileName: 'Bruchstein.png', size: '300x300', mcColor: '#808080' },
             'I': { name: 'Eisen', fileName: 'Eisenbarren.png', size: '160x160', mcColor: '#c0c0c0' },
             'S': { name: 'Stock', fileName: 'Stock.png', size: '160x160', mcColor: '#7a5230' },
@@ -332,7 +332,7 @@
             const material = materialMap[materialId];
             const img = document.createElement('img');
             
-            // 1. Versuche, die vom Benutzer bereitgestellte Datei zu laden (z.B. Holzbretter.png)
+            // 1. Versuche, die vom Benutzer bereitgestellte Datei zu laden (z.B. Eichenholzbretter.png)
             img.src = material.fileName;
             img.alt = material.name;
             
