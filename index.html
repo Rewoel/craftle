@@ -9,14 +9,14 @@
         /* --- Minecraft UI Basis Styling --- */
         @font-face {
             font-family: 'Minecraft-UI';
-            /* In a real scenario, you'd use a pixel font. Here we use a clean fallback. */
+            /* Using a clean fallback for the pixel font look */
             font-weight: normal;
             font-style: normal;
         }
         body {
             font-family: 'Minecraft-UI', 'Inter', sans-serif;
             background-color: #3c3c3c; /* Inventory Background Dark Gray */
-            color: #1f1f1f; /* Dark text color for light UI */
+            color: #1f1f1f; 
             display: flex;
             justify-content: center;
             padding: 20px;
@@ -38,17 +38,14 @@
             position: relative;
         }
 
-        /* --- Slot Styling --- */
+        /* --- Slot Styling (50x50) --- */
         .mc-slot {
-            background-color: #8b8b8b; /* Slot Inner Background */
-            width: 50px; /* Base size */
+            background-color: #8b8b8b; /* Default Slot Inner Background (Sunken) */
+            width: 50px; 
             height: 50px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 0.75rem;
-            font-weight: bold;
-            text-align: center;
             cursor: pointer;
             border-radius: 0;
             user-select: none;
@@ -58,19 +55,20 @@
             border: 1px solid transparent;
             box-shadow: 1px 1px 0 0 #000, 
                         -1px -1px 0 0 #fff;
-        }
-
-        /* Slots inside the grid */
-        #currentGuessGrid .mc-slot {
-            margin: 1px; /* Small gap between slots */
-        }
-
-        .mc-slot.filled {
-            color: #1f1f1f;
+            position: relative; /* For image positioning */
+            overflow: hidden;
         }
         
+        .mc-slot img {
+            width: 80%; /* Smaller than 100% to show background color feedback */
+            height: 80%;
+            object-fit: contain;
+            image-rendering: pixelated; /* Ensures crisp pixel images */
+            z-index: 10;
+        }
+
+        /* Empty slots show the background texture without an image */
         .mc-slot.empty {
-            color: #555;
             background-color: #8b8b8b;
         }
 
@@ -79,7 +77,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0px;
-            width: 156px; /* 3*50px + 2*3px margin/gap */
+            width: 156px; 
             aspect-ratio: 1 / 1;
             padding: 1px;
         }
@@ -93,7 +91,6 @@
         .mc-arrow {
             width: 40px;
             height: 10px;
-            /* Arrow graphic using border/box-shadow for pixel look */
             background: linear-gradient(to right, #8b8b8b 50%, #fff 50%);
             background-size: 2px 100%;
             border-top: 1px solid #555;
@@ -114,20 +111,17 @@
                         -1px -1px 0 0 #fff;
         }
 
-        /* --- Feedback Colors (Material/Slot) --- */
+        /* --- Feedback Colors (Applied to the Slot Background) --- */
         .feedback-green {
             background-color: #00aa00 !important; /* Brighter Green for success */
-            color: white;
             box-shadow: 1px 1px 0 0 #005500, -1px -1px 0 0 #55ff55 !important;
         }
         .feedback-yellow {
             background-color: #ffaa00 !important; /* Orange/Gold for warning */
-            color: #1f1f1f;
             box-shadow: 1px 1px 0 0 #aa5500, -1px -1px 0 0 #ffff55 !important;
         }
         .feedback-gray {
             background-color: #555555 !important; /* Dark Gray for wrong */
-            color: #c6c6c6;
             box-shadow: 1px 1px 0 0 #000000, -1px -1px 0 0 #8b8b8b !important;
         }
 
@@ -139,7 +133,6 @@
         }
         .material-button {
             padding: 0;
-            border-radius: 0;
             box-shadow: none;
             height: 50px;
             width: 100%;
@@ -149,6 +142,13 @@
             box-shadow: inset 1px 1px 0 0 #000, 
                         inset -1px -1px 0 0 #fff;
             outline: none;
+            background-color: #c6c6c6; /* Lighter background when active */
+        }
+        /* Style for the 'Leer' (empty) button */
+        .mc-slot.material-empty {
+            background-color: #555555;
+            color: #c6c6c6;
+            font-size: 0.75rem;
         }
 
         /* --- General UI Elements --- */
@@ -168,6 +168,7 @@
             font-weight: bold;
             padding: 8px;
             text-shadow: 1px 1px 0 #fff;
+            image-rendering: pixelated;
         }
         .mc-button:hover:not(:disabled) {
             background-color: #9c9c9c;
@@ -248,7 +249,7 @@
         <div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white text-sm">
             <h2 class="text-xl font-bold mb-2">Anleitung</h2>
             <ul class="list-disc list-inside space-y-1">
-                <li>Wähle unten ein Material aus und platziere es in das 3x3-Gitter.</li>
+                <li>Wähle unten ein Material (oder "Leer") aus und platziere es in das 3x3-Gitter.</li>
                 <li>Du kannst ein Rezept prüfen, sobald du **mindestens ein Material** platziert hast.</li>
                 <li>**Feedback**: Grün = Material & Position richtig. Gelb = Material richtig, Position falsch. Grau = Material nicht im Rezept.</li>
             </ul>
@@ -275,33 +276,25 @@
     <script>
         // --- Globale Variablen und Konfiguration ---
         const MAX_ATTEMPTS = 6;
-        let gameState = {
-            targetRecipe: [],
-            targetItem: '',
-            currentGuess: Array(9).fill('E'), // E for Empty (Leer)
-            attempts: [],
-            attemptCount: 0,
-            gameOver: false,
-            selectedMaterial: 'W', // Default selected material is Wood
-        };
+        let gameState = {};
 
         const materialMap = {
-            'E': { name: 'Leer', color: 'bg-gray-700' },
-            'W': { name: 'Holz', mcColor: '#a0522d', mcTextColor: 'white' }, // Sienna
-            'C': { name: 'Stein', mcColor: '#808080', mcTextColor: 'white' }, // Gray
-            'I': { name: 'Eisen', mcColor: '#c0c0c0', mcTextColor: 'black' }, // Silver
-            'S': { name: 'Stock', mcColor: '#7a5230', mcTextColor: 'white' }, // Wood Brown
-            'D': { name: 'Dia', mcColor: '#6afb92', mcTextColor: 'black' }, // Mint Green (Diamond)
-            'G': { name: 'Gold', mcColor: '#ffd700', mcTextColor: 'black' }, // Gold
+            // Die Dateinamen und Größen entsprechen den Benutzerangaben
+            'E': { name: 'Leer', fileName: 'Leer.png', size: '160x160', mcColor: '#8b8b8b' },
+            'W': { name: 'Holz', fileName: 'Holzbretter.png', size: '300x300', mcColor: '#a0522d' },
+            'C': { name: 'Stein', fileName: 'Bruchstein.png', size: '300x300', mcColor: '#808080' },
+            'I': { name: 'Eisen', fileName: 'Eisenbarren.png', size: '160x160', mcColor: '#c0c0c0' },
+            'S': { name: 'Stock', fileName: 'Stock.png', size: '160x160', mcColor: '#7a5230' },
+            'D': { name: 'Dia', fileName: 'Diamant.png', size: '160x160', mcColor: '#6afb92' },
+            'G': { name: 'Gold', fileName: 'Goldbarren.png', size: '160x160', mcColor: '#ffd700' },
         };
 
         // Definition der Rezepte: [0, 1, 2, 3, 4, 5, 6, 7, 8] (9 Slots)
-        // E = Empty, W = Wood Plank, C = Cobblestone, I = Iron, S = Stick, D = Diamond, G = Gold
         const recipes = [
             { item: 'Holzspitzhacke', recipe: ['W', 'W', 'W', 'E', 'S', 'E', 'E', 'S', 'E'] },
             { item: 'Truhe', recipe: ['W', 'W', 'W', 'W', 'E', 'W', 'W', 'W', 'W'] },
             { item: 'Ofen', recipe: ['C', 'C', 'C', 'C', 'E', 'C', 'C', 'C', 'C'] },
-            { item: 'Fackel', recipe: ['E', 'E', 'E', 'E', 'C', 'E', 'E', 'S', 'E'] },
+            { item: 'Fackel', recipe: ['E', 'E', 'E', 'E', 'C', 'E', 'E', 'S', 'E'] }, // C als Platzhalter für Kohle
             { item: 'Eisenhelm', recipe: ['I', 'I', 'I', 'I', 'E', 'I', 'E', 'E', 'E'] },
             { item: 'Schwert', recipe: ['E', 'I', 'E', 'E', 'I', 'E', 'E', 'S', 'E'] },
             { item: 'Eimer', recipe: ['I', 'E', 'I', 'E', 'I', 'E', 'E', 'E', 'E'] },
@@ -321,6 +314,40 @@
         const modalMessage = document.getElementById('modalMessage');
         const modalTargetName = document.getElementById('modalTargetName');
         const correctRecipeDisplay = document.getElementById('correctRecipeDisplay');
+        
+        // --- Hilfsfunktion für Bilder (Placeholder-Logik für Canvas) ---
+        function getMaterialImageUrl(materialId) {
+            const material = materialMap[materialId];
+            if (materialId === 'E') return ''; 
+
+            const [width, height] = material.size.split('x');
+            const color = material.mcColor.replace('#', '');
+            const textColor = 'ffffff'; 
+
+            // Simuliert die Platzhalter-Textur, falls die lokale Datei nicht gefunden wird.
+            return `https://placehold.co/${width}x${height}/${color}/${textColor}?text=${material.name.substring(0,3)}`;
+        }
+
+        function createMaterialImageElement(materialId) {
+            const material = materialMap[materialId];
+            const img = document.createElement('img');
+            
+            // 1. Versuche, die vom Benutzer bereitgestellte Datei zu laden (z.B. Holzbretter.png)
+            img.src = material.fileName;
+            img.alt = material.name;
+            
+            // 2. Fallback: Zeige einen farbigen Platzhalter an, wenn die Datei nicht gefunden wird
+            img.onerror = function() {
+                this.src = getMaterialImageUrl(materialId);
+                // Entferne den onerror Handler, um keine Endlosschleife zu erzeugen
+                this.onerror = null; 
+            };
+            
+            // Füge eine kleine visuelle Verzögerung hinzu, um den Übergang von Text zu Bild zu glätten
+            img.classList.add('transition', 'duration-100', 'ease-out');
+            
+            return img;
+        }
 
 
         // --- Initialisierung ---
@@ -340,7 +367,7 @@
                 attempts: [],
                 attemptCount: 0,
                 gameOver: false,
-                selectedMaterial: 'W',
+                selectedMaterial: 'W', // Default selected material is Wood
             };
 
             targetItemNameEl.textContent = '???';
@@ -360,24 +387,17 @@
         function renderCurrentGuessGrid() {
             currentGuessGridEl.innerHTML = '';
             gameState.currentGuess.forEach((materialId, index) => {
-                const material = materialMap[materialId];
                 const slot = document.createElement('div');
-                
-                slot.className = `mc-slot ${materialId === 'E' ? 'empty' : 'filled'}`;
+                slot.className = `mc-slot`;
                 slot.id = `slot-${index}`;
-                slot.textContent = materialId === 'E' ? '' : material.name.substring(0, 3);
                 
+                // Füge Bild nur hinzu, wenn Material nicht 'Leer' ist
                 if (materialId !== 'E') {
-                    // Apply material color and text color
-                    slot.style.backgroundColor = material.mcColor;
-                    slot.style.color = material.mcTextColor;
-                    // Apply raised border effect for filled slots
-                    slot.style.boxShadow = `1px 1px 0 0 #fff, -1px -1px 0 0 #000`; 
+                    const img = createMaterialImageElement(materialId);
+                    slot.appendChild(img);
                 } else {
-                    // Apply sunken border effect for empty slots
-                    slot.style.boxShadow = `1px 1px 0 0 #000, -1px -1px 0 0 #fff`;
+                    slot.classList.add('empty');
                 }
-
 
                 slot.addEventListener('click', () => handleSlotClick(index));
                 currentGuessGridEl.appendChild(slot);
@@ -387,20 +407,22 @@
 
         function renderMaterialPicker() {
             materialPickerEl.innerHTML = '';
-            const availableMaterials = Object.keys(materialMap).filter(id => id !== 'E');
+            const availableMaterials = Object.keys(materialMap);
 
             availableMaterials.forEach(id => {
                 const material = materialMap[id];
                 const button = document.createElement('button');
-                button.className = `mc-slot material-button font-semibold ${gameState.selectedMaterial === id ? 'material-active' : ''}`;
                 
-                // Set custom color for button
-                button.style.backgroundColor = material.mcColor;
-                button.style.color = material.mcTextColor;
-                button.textContent = material.name.substring(0, 3);
-                
-                // Initial state for buttons (raised)
-                button.style.boxShadow = `1px 1px 0 0 #fff, -1px -1px 0 0 #000`;
+                // Der "Leer"-Slot ist ein Button, aber ohne Bild
+                if (id === 'E') {
+                    button.className = `mc-slot material-button material-empty font-semibold ${gameState.selectedMaterial === id ? 'material-active' : ''}`;
+                    button.textContent = 'Leer';
+                } else {
+                    // Normale Material-Buttons
+                    button.className = `mc-slot material-button font-semibold ${gameState.selectedMaterial === id ? 'material-active' : ''}`;
+                    const img = createMaterialImageElement(id);
+                    button.appendChild(img);
+                }
 
                 button.setAttribute('data-material-id', id);
 
@@ -422,9 +444,18 @@
             guess.forEach((materialId, index) => {
                 const fb = feedback[index];
                 const slot = document.createElement('div');
-                slot.className = `mc-slot ${fb.color}`; // Feedback colors handle BG and Shadow
-                slot.textContent = materialMap[materialId].name.substring(0, 3);
                 
+                // Füge Feedback-Klasse hinzu (dies steuert die Hintergrundfarbe)
+                slot.className = `mc-slot ${fb.color}`; 
+                
+                if (materialId !== 'E') {
+                    const img = createMaterialImageElement(materialId);
+                    slot.appendChild(img);
+                } else {
+                    slot.classList.add('empty');
+                }
+                
+                // Füge eine kleine Verzögerung für den "Flipp"-Effekt hinzu
                 slot.style.animationDelay = `${index * 0.05}s`;
 
                 feedbackGrid.appendChild(slot);
@@ -437,17 +468,15 @@
         function renderCorrectRecipe(recipe, containerEl) {
             containerEl.innerHTML = '';
             recipe.forEach(materialId => {
-                const material = materialMap[materialId];
                 const slot = document.createElement('div');
-                slot.className = `mc-slot ${materialId === 'E' ? 'empty' : 'filled'}`;
-                slot.textContent = material.name.substring(0, 3);
-
+                slot.className = `mc-slot`;
+                
                 if (materialId !== 'E') {
-                    slot.style.backgroundColor = material.mcColor;
-                    slot.style.color = material.mcTextColor;
-                    slot.style.boxShadow = `1px 1px 0 0 #fff, -1px -1px 0 0 #000`; 
+                    const img = createMaterialImageElement(materialId);
+                    slot.appendChild(img);
+                    slot.style.boxShadow = `1px 1px 0 0 #fff, -1px -1px 0 0 #000`; // Raised effect
                 } else {
-                    slot.style.boxShadow = `1px 1px 0 0 #000, -1px -1px 0 0 #fff`;
+                    slot.classList.add('empty');
                 }
 
                 containerEl.appendChild(slot);
@@ -494,13 +523,7 @@
             let correctCount = 0;
             for (let i = 0; i < 9; i++) {
                 if (guess[i] === target[i]) { 
-                    if (guess[i] !== 'E') {
-                        // Grüner Treffer mit Material
-                        feedback[i] = { color: 'feedback-green', id: guess[i] };
-                    } else {
-                        // E/E Treffer
-                        feedback[i] = { color: 'feedback-gray', id: 'E' }; 
-                    }
+                    feedback[i] = { color: 'feedback-green', id: guess[i] };
                     correctCount++;
                     guess[i] = null; 
                     target[i] = null;
@@ -518,26 +541,21 @@
             let hasNonGrayFeedback = correctCount > 0;
 
             for (let i = 0; i < 9; i++) {
-                if (feedback[i] === null && guess[i] !== 'E') {
+                if (feedback[i] === null && guess[i] !== null) {
                     const materialId = guess[i];
                     
-                    if (targetCounts[materialId] > 0) {
+                    if (materialId !== 'E' && targetCounts[materialId] > 0) {
                         feedback[i] = { color: 'feedback-yellow', id: materialId };
                         targetCounts[materialId]--;
                         hasNonGrayFeedback = true;
                     } else {
-                        // 3. GRAU (Material nicht im Rezept)
+                        // 3. GRAU (Material nicht im Rezept oder "Leer" falsch geraten)
                         feedback[i] = { color: 'feedback-gray', id: materialId };
                     }
                 }
-                // Slots, die noch NULL sind, sind Slots, bei denen der Spieler 'E' geraten hat,
-                // das Ziel aber Material brauchte (was falsch ist -> Grau).
-                if (feedback[i] === null) {
-                    feedback[i] = { color: 'feedback-gray', id: guess[i] || 'E' };
-                }
             }
             
-            // Item-Namen aufdecken
+            // Item-Namen aufdecken, falls Feedback gegeben wurde
             if (hasNonGrayFeedback && targetItemNameEl.textContent === '???') {
                 targetItemNameEl.textContent = gameState.targetItem;
             }
