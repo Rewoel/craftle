@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Craftle: Crafting Table</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* --- Minecraft UI Basis Styling --- */
+        @font-face {
+            font-family: 'Minecraft-UI';
+            /* In a real scenario, you'd use a pixel font. Here we use a clean fallback. */
+            font-weight: normal;
+            font-style: normal;
+        }
+        body {
+            font-family: 'Minecraft-UI', 'Inter', sans-serif;
+            background-color: #3c3c3c; /* Inventory Background Dark Gray */
+            color: #1f1f1f; /* Dark text color for light UI */
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        /* The Main Card (Inventory/Crafting Table Window) */
+        .mc-window {
+            background-color: #c6c6c6; /* Light Gray Card */
+            border: 2px solid #000;
+            /* Chiseled Border Effect (Top/Left light, Bottom/Right dark) */
+            box-shadow: 2px 2px 0 0 #555, 
+                        -2px -2px 0 0 #fff; 
+            padding: 6px; 
+            border-radius: 0; /* Blocky look */
+            position: relative;
+        }
+
+        /* --- Slot Styling --- */
+        .mc-slot {
+            background-color: #8b8b8b; /* Slot Inner Background */
+            width: 50px; /* Base size */
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 0;
+            user-select: none;
+            transition: none;
+            
+            /* Sunken/Inner Border Effect */
+            border: 1px solid transparent;
+            box-shadow: 1px 1px 0 0 #000, 
+                        -1px -1px 0 0 #fff;
+        }
+
+        /* Slots inside the grid */
+        #currentGuessGrid .mc-slot {
+            margin: 1px; /* Small gap between slots */
+        }
+
+        .mc-slot.filled {
+            color: #1f1f1f;
+        }
+        
+        .mc-slot.empty {
+            color: #555;
+            background-color: #8b8b8b;
+        }
+
+        /* --- Grid and Layout --- */
+        .mc-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0px;
+            width: 156px; /* 3*50px + 2*3px margin/gap */
+            aspect-ratio: 1 / 1;
+            padding: 1px;
+        }
+
+        /* The Arrow Graphic */
+        .mc-arrow-container {
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+        .mc-arrow {
+            width: 40px;
+            height: 10px;
+            /* Arrow graphic using border/box-shadow for pixel look */
+            background: linear-gradient(to right, #8b8b8b 50%, #fff 50%);
+            background-size: 2px 100%;
+            border-top: 1px solid #555;
+            border-bottom: 1px solid #fff;
+            position: relative;
+        }
+        .mc-arrow::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -2px;
+            width: 0;
+            height: 0;
+            border-top: 7px solid transparent;
+            border-bottom: 7px solid transparent;
+            border-left: 6px solid #8b8b8b;
+            box-shadow: -1px 1px 0 0 #000, 
+                        -1px -1px 0 0 #fff;
+        }
+
+        /* --- Feedback Colors (Material/Slot) --- */
+        .feedback-green {
+            background-color: #00aa00 !important; /* Brighter Green for success */
+            color: white;
+            box-shadow: 1px 1px 0 0 #005500, -1px -1px 0 0 #55ff55 !important;
+        }
+        .feedback-yellow {
+            background-color: #ffaa00 !important; /* Orange/Gold for warning */
+            color: #1f1f1f;
+            box-shadow: 1px 1px 0 0 #aa5500, -1px -1px 0 0 #ffff55 !important;
+        }
+        .feedback-gray {
+            background-color: #555555 !important; /* Dark Gray for wrong */
+            color: #c6c6c6;
+            box-shadow: 1px 1px 0 0 #000000, -1px -1px 0 0 #8b8b8b !important;
+        }
+
+        /* --- Material Picker (Inventory) --- */
+        .mc-inventory-grid {
+            grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+            gap: 4px;
+            padding-top: 8px;
+        }
+        .material-button {
+            padding: 0;
+            border-radius: 0;
+            box-shadow: none;
+            height: 50px;
+            width: 100%;
+        }
+        .material-active {
+            /* Highlight effect for selected material (sunken/pressed) */
+            box-shadow: inset 1px 1px 0 0 #000, 
+                        inset -1px -1px 0 0 #fff;
+            outline: none;
+        }
+
+        /* --- General UI Elements --- */
+        .mc-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #3f3f3f;
+            text-shadow: 1px 1px 0 #fff;
+            padding-left: 5px;
+            margin-bottom: 5px;
+        }
+        .mc-button {
+            border: 2px solid #000;
+            background-color: #8b8b8b;
+            box-shadow: 1px 1px 0 0 #555, -1px -1px 0 0 #fff;
+            color: #1f1f1f;
+            font-weight: bold;
+            padding: 8px;
+            text-shadow: 1px 1px 0 #fff;
+        }
+        .mc-button:hover:not(:disabled) {
+            background-color: #9c9c9c;
+        }
+        .mc-button:active:not(:disabled) {
+            /* Pressed state */
+            box-shadow: inset 1px 1px 0 0 #000, inset -1px -1px 0 0 #fff;
+            padding-top: 9px;
+            padding-bottom: 7px;
+        }
+        .mc-button:disabled {
+            background-color: #555555;
+            color: #8b8b8b;
+            cursor: not-allowed;
+            text-shadow: none;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-6 text-yellow-300">Minecraft Craftle</h1>
+        
+        <!-- UI Card/Window Start -->
+        <div class="mc-window shadow-2xl">
+            
+            <!-- Target Item Info (Titled like the Inventory Title) -->
+            <div class="mc-title mb-4">
+                <span class="text-base text-gray-700">Crafting für:</span> 
+                <span id="targetItemName" class="font-bold text-xl text-orange-700">???</span>
+            </div>
+
+            <!-- Crafting Area: 3x3 Grid, Arrow, and Result Slot -->
+            <div class="flex items-start justify-center mb-6">
+                <!-- 3x3 Crafting Grid Container -->
+                <div id="currentGuessGrid" class="mc-grid">
+                    <!-- Grid slots are generated here -->
+                </div>
+
+                <!-- Arrow -->
+                <div class="mc-arrow-container">
+                    <div class="mc-arrow"></div>
+                </div>
+
+                <!-- Result Slot -->
+                <div id="resultSlot" class="mc-slot">
+                    <span id="resultContent" class="text-xl font-bold text-gray-400">?</span>
+                </div>
+            </div>
+
+            <!-- Material Picker Area (Inventory Section) -->
+            <div class="mc-title mt-4">Materialien (Inventory)</div>
+            <div id="materialPicker" class="grid mc-inventory-grid">
+                <!-- Material buttons are generated here -->
+            </div>
+
+            <!-- Aktions-Buttons -->
+            <div class="flex flex-col space-y-4 mt-6">
+                <button id="submitButton" class="mc-button text-lg" disabled>
+                    Rezept prüfen (0/6)
+                </button>
+            </div>
+            
+            <!-- Bisherige Versuche (Feedback) -->
+            <div class="mc-title mt-6 text-xl">Bisherige Versuche:</div>
+            <div id="attemptsContainer" class="space-y-3 p-2 border border-gray-500 rounded-sm">
+                <!-- Previous attempts will be displayed here -->
+            </div>
+
+            <button id="restartButton" class="mc-button mt-4 w-full hidden">
+                Neues Spiel starten
+            </button>
+
+        </div> 
+        <!-- UI Card/Window End -->
+
+        <!-- Instructions (Outside the Main Window for simplicity) -->
+        <div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white text-sm">
+            <h2 class="text-xl font-bold mb-2">Anleitung</h2>
+            <ul class="list-disc list-inside space-y-1">
+                <li>Wähle unten ein Material aus und platziere es in das 3x3-Gitter.</li>
+                <li>Du kannst ein Rezept prüfen, sobald du **mindestens ein Material** platziert hast.</li>
+                <li>**Feedback**: Grün = Material & Position richtig. Gelb = Material richtig, Position falsch. Grau = Material nicht im Rezept.</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- Modal für Spielende/Sieg (Styled as a Minecraft dialog) -->
+    <div id="modalOverlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div id="modalContent" class="mc-window p-8 w-11/12 max-w-md text-center border-4 border-black">
+            <h3 id="modalTitle" class="text-3xl font-bold mb-4 text-orange-700 text-shadow-lg"></h3>
+            <p id="modalMessage" class="mb-6 text-lg"></p>
+            <div class="bg-gray-400 p-3 mb-6 border border-gray-500">
+                <p class="text-sm font-semibold mb-2">Das korrekte Rezept für: <span id="modalTargetName" class="font-bold"></span></p>
+                <div id="correctRecipeDisplay" class="mc-grid mx-auto max-w-[156px]"></div>
+            </div>
+            <button onclick="restartGame()" class="mc-button py-2 px-6">
+                Neues Spiel starten
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Globale Variablen und Konfiguration ---
+        const MAX_ATTEMPTS = 6;
+        let gameState = {
+            targetRecipe: [],
+            targetItem: '',
+            currentGuess: Array(9).fill('E'), // E for Empty (Leer)
+            attempts: [],
+            attemptCount: 0,
+            gameOver: false,
+            selectedMaterial: 'W', // Default selected material is Wood
+        };
+
+        const materialMap = {
+            'E': { name: 'Leer', color: 'bg-gray-700' },
+            'W': { name: 'Holz', mcColor: '#a0522d', mcTextColor: 'white' }, // Sienna
+            'C': { name: 'Stein', mcColor: '#808080', mcTextColor: 'white' }, // Gray
+            'I': { name: 'Eisen', mcColor: '#c0c0c0', mcTextColor: 'black' }, // Silver
+            'S': { name: 'Stock', mcColor: '#7a5230', mcTextColor: 'white' }, // Wood Brown
+            'D': { name: 'Dia', mcColor: '#6afb92', mcTextColor: 'black' }, // Mint Green (Diamond)
+            'G': { name: 'Gold', mcColor: '#ffd700', mcTextColor: 'black' }, // Gold
+        };
+
+        // Definition der Rezepte: [0, 1, 2, 3, 4, 5, 6, 7, 8] (9 Slots)
+        // E = Empty, W = Wood Plank, C = Cobblestone, I = Iron, S = Stick, D = Diamond, G = Gold
+        const recipes = [
+            { item: 'Holzspitzhacke', recipe: ['W', 'W', 'W', 'E', 'S', 'E', 'E', 'S', 'E'] },
+            { item: 'Truhe', recipe: ['W', 'W', 'W', 'W', 'E', 'W', 'W', 'W', 'W'] },
+            { item: 'Ofen', recipe: ['C', 'C', 'C', 'C', 'E', 'C', 'C', 'C', 'C'] },
+            { item: 'Fackel', recipe: ['E', 'E', 'E', 'E', 'C', 'E', 'E', 'S', 'E'] },
+            { item: 'Eisenhelm', recipe: ['I', 'I', 'I', 'I', 'E', 'I', 'E', 'E', 'E'] },
+            { item: 'Schwert', recipe: ['E', 'I', 'E', 'E', 'I', 'E', 'E', 'S', 'E'] },
+            { item: 'Eimer', recipe: ['I', 'E', 'I', 'E', 'I', 'E', 'E', 'E', 'E'] },
+            { item: 'Diamantblock', recipe: ['D', 'D', 'D', 'D', 'D', 'D', 'D', 'D', 'D'] },
+        ];
+
+
+        // --- DOM-Elemente ---
+        const targetItemNameEl = document.getElementById('targetItemName');
+        const currentGuessGridEl = document.getElementById('currentGuessGrid');
+        const materialPickerEl = document.getElementById('materialPicker');
+        const submitButton = document.getElementById('submitButton');
+        const attemptsContainerEl = document.getElementById('attemptsContainer');
+        const restartButtonEl = document.getElementById('restartButton');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalTargetName = document.getElementById('modalTargetName');
+        const correctRecipeDisplay = document.getElementById('correctRecipeDisplay');
+
+
+        // --- Initialisierung ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initGame();
+        });
+
+        function initGame() {
+            const randomIndex = Math.floor(Math.random() * recipes.length);
+            const target = recipes[randomIndex];
+
+            gameState = {
+                targetRecipe: target.recipe,
+                targetItem: target.item,
+                currentGuess: Array(9).fill('E'),
+                attempts: [],
+                attemptCount: 0,
+                gameOver: false,
+                selectedMaterial: 'W',
+            };
+
+            targetItemNameEl.textContent = '???';
+            submitButton.textContent = `Rezept prüfen (0/${MAX_ATTEMPTS})`;
+            submitButton.disabled = false;
+            restartButtonEl.classList.add('hidden');
+            attemptsContainerEl.innerHTML = '';
+            modalOverlay.classList.add('hidden');
+
+            renderCurrentGuessGrid();
+            renderMaterialPicker();
+            updateSubmitButtonState();
+        }
+
+        // --- Rendering Funktionen ---
+
+        function renderCurrentGuessGrid() {
+            currentGuessGridEl.innerHTML = '';
+            gameState.currentGuess.forEach((materialId, index) => {
+                const material = materialMap[materialId];
+                const slot = document.createElement('div');
+                
+                slot.className = `mc-slot ${materialId === 'E' ? 'empty' : 'filled'}`;
+                slot.id = `slot-${index}`;
+                slot.textContent = materialId === 'E' ? '' : material.name.substring(0, 3);
+                
+                if (materialId !== 'E') {
+                    // Apply material color and text color
+                    slot.style.backgroundColor = material.mcColor;
+                    slot.style.color = material.mcTextColor;
+                    // Apply raised border effect for filled slots
+                    slot.style.boxShadow = `1px 1px 0 0 #fff, -1px -1px 0 0 #000`; 
+                } else {
+                    // Apply sunken border effect for empty slots
+                    slot.style.boxShadow = `1px 1px 0 0 #000, -1px -1px 0 0 #fff`;
+                }
+
+
+                slot.addEventListener('click', () => handleSlotClick(index));
+                currentGuessGridEl.appendChild(slot);
+            });
+        }
+
+
+        function renderMaterialPicker() {
+            materialPickerEl.innerHTML = '';
+            const availableMaterials = Object.keys(materialMap).filter(id => id !== 'E');
+
+            availableMaterials.forEach(id => {
+                const material = materialMap[id];
+                const button = document.createElement('button');
+                button.className = `mc-slot material-button font-semibold ${gameState.selectedMaterial === id ? 'material-active' : ''}`;
+                
+                // Set custom color for button
+                button.style.backgroundColor = material.mcColor;
+                button.style.color = material.mcTextColor;
+                button.textContent = material.name.substring(0, 3);
+                
+                // Initial state for buttons (raised)
+                button.style.boxShadow = `1px 1px 0 0 #fff, -1px -1px 0 0 #000`;
+
+                button.setAttribute('data-material-id', id);
+
+                button.addEventListener('click', () => {
+                    gameState.selectedMaterial = id;
+                    renderMaterialPicker(); // Re-render to update active state
+                });
+                materialPickerEl.appendChild(button);
+            });
+        }
+
+        function renderAttempt(guess, feedback) {
+            const attemptDiv = document.createElement('div');
+            attemptDiv.className = 'flex flex-col p-2 bg-gray-500/50 rounded-sm feedback-grid';
+
+            const feedbackGrid = document.createElement('div');
+            feedbackGrid.className = 'mc-grid mx-auto';
+
+            guess.forEach((materialId, index) => {
+                const fb = feedback[index];
+                const slot = document.createElement('div');
+                slot.className = `mc-slot ${fb.color}`; // Feedback colors handle BG and Shadow
+                slot.textContent = materialMap[materialId].name.substring(0, 3);
+                
+                slot.style.animationDelay = `${index * 0.05}s`;
+
+                feedbackGrid.appendChild(slot);
+            });
+
+            attemptDiv.appendChild(feedbackGrid);
+            attemptsContainerEl.prepend(attemptDiv);
+        }
+
+        function renderCorrectRecipe(recipe, containerEl) {
+            containerEl.innerHTML = '';
+            recipe.forEach(materialId => {
+                const material = materialMap[materialId];
+                const slot = document.createElement('div');
+                slot.className = `mc-slot ${materialId === 'E' ? 'empty' : 'filled'}`;
+                slot.textContent = material.name.substring(0, 3);
+
+                if (materialId !== 'E') {
+                    slot.style.backgroundColor = material.mcColor;
+                    slot.style.color = material.mcTextColor;
+                    slot.style.boxShadow = `1px 1px 0 0 #fff, -1px -1px 0 0 #000`; 
+                } else {
+                    slot.style.boxShadow = `1px 1px 0 0 #000, -1px -1px 0 0 #fff`;
+                }
+
+                containerEl.appendChild(slot);
+            });
+        }
+
+        // --- Event Handler ---
+
+        function handleSlotClick(index) {
+            if (gameState.gameOver) return;
+
+            const currentMaterial = gameState.currentGuess[index];
+
+            if (currentMaterial === gameState.selectedMaterial) {
+                // Clear the slot
+                gameState.currentGuess[index] = 'E';
+            } else {
+                // Set the selected material
+                gameState.currentGuess[index] = gameState.selectedMaterial;
+            }
+
+            renderCurrentGuessGrid();
+            updateSubmitButtonState();
+        }
+
+        function updateSubmitButtonState() {
+            const isAnyMaterialPlaced = gameState.currentGuess.some(id => id !== 'E');
+            submitButton.disabled = !isAnyMaterialPlaced || gameState.gameOver;
+            submitButton.textContent = `Rezept prüfen (${gameState.attemptCount}/${MAX_ATTEMPTS})`;
+        }
+
+        // --- Logik ---
+
+        submitButton.addEventListener('click', checkRecipe);
+
+        function checkRecipe() {
+            if (gameState.gameOver || submitButton.disabled) return;
+
+            const guess = [...gameState.currentGuess];
+            const target = [...gameState.targetRecipe];
+            const feedback = Array(9).fill(null);
+            
+            // 1. Zuerst GRÜN (Perfekter Treffer) prüfen
+            let correctCount = 0;
+            for (let i = 0; i < 9; i++) {
+                if (guess[i] === target[i]) { 
+                    if (guess[i] !== 'E') {
+                        // Grüner Treffer mit Material
+                        feedback[i] = { color: 'feedback-green', id: guess[i] };
+                    } else {
+                        // E/E Treffer
+                        feedback[i] = { color: 'feedback-gray', id: 'E' }; 
+                    }
+                    correctCount++;
+                    guess[i] = null; 
+                    target[i] = null;
+                }
+            }
+            
+            // 2. GELB (Material im Rezept, aber falsche Position) prüfen
+            const targetCounts = {};
+            for (let i = 0; i < 9; i++) {
+                if (target[i] !== null && target[i] !== 'E') {
+                    targetCounts[target[i]] = (targetCounts[target[i]] || 0) + 1;
+                }
+            }
+            
+            let hasNonGrayFeedback = correctCount > 0;
+
+            for (let i = 0; i < 9; i++) {
+                if (feedback[i] === null && guess[i] !== 'E') {
+                    const materialId = guess[i];
+                    
+                    if (targetCounts[materialId] > 0) {
+                        feedback[i] = { color: 'feedback-yellow', id: materialId };
+                        targetCounts[materialId]--;
+                        hasNonGrayFeedback = true;
+                    } else {
+                        // 3. GRAU (Material nicht im Rezept)
+                        feedback[i] = { color: 'feedback-gray', id: materialId };
+                    }
+                }
+                // Slots, die noch NULL sind, sind Slots, bei denen der Spieler 'E' geraten hat,
+                // das Ziel aber Material brauchte (was falsch ist -> Grau).
+                if (feedback[i] === null) {
+                    feedback[i] = { color: 'feedback-gray', id: guess[i] || 'E' };
+                }
+            }
+            
+            // Item-Namen aufdecken
+            if (hasNonGrayFeedback && targetItemNameEl.textContent === '???') {
+                targetItemNameEl.textContent = gameState.targetItem;
+            }
+
+            gameState.attempts.push({ guess: gameState.currentGuess, feedback: feedback });
+            renderAttempt(gameState.currentGuess, feedback);
+
+
+            // Sofortiger Sieg-Check: 9 korrekte Positionen
+            if (correctCount === 9) {
+                endGame(true);
+                return;
+            }
+
+            // Nächsten Versuch vorbereiten
+            gameState.attemptCount++;
+            gameState.currentGuess = Array(9).fill('E');
+            renderCurrentGuessGrid();
+            updateSubmitButtonState();
+
+            // Spielende-Check
+            if (gameState.attemptCount >= MAX_ATTEMPTS) {
+                endGame(false);
+            }
+        }
+        
+        // --- Spielende-Funktion ---
+        
+        function endGame(won) {
+            gameState.gameOver = true;
+            submitButton.disabled = true;
+            restartButtonEl.classList.remove('hidden');
+            modalTargetName.textContent = gameState.targetItem;
+            renderCorrectRecipe(gameState.targetRecipe, correctRecipeDisplay);
+
+            if (won) {
+                modalTitle.textContent = "GEWONNEN!";
+                modalMessage.textContent = `Herzlichen Glückwunsch! Du hast das Rezept für die ${gameState.targetItem} in ${gameState.attemptCount} Versuchen erraten.`;
+                modalTitle.classList.remove('text-red-700');
+                modalTitle.classList.add('text-green-700');
+            } else {
+                modalTitle.textContent = "SPIEL VORBEI!";
+                modalMessage.textContent = `Schade, das korrekte Rezept für die ${gameState.targetItem} war:`;
+                modalTitle.classList.remove('text-green-700');
+                modalTitle.classList.add('text-red-700');
+            }
+
+            modalOverlay.classList.remove('hidden');
+        }
+
+        window.restartGame = function() {
+            initGame();
+        }
+
+    </script>
+</body>
+</html>
