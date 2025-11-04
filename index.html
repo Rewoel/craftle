@@ -4,27 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minecraft Craftle: Crafting Table</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lade Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lade die Pixel-Schriftart (Press Start 2P) --><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
     <style>
         /* --- Minecraft UI Basis Styling --- */
-        @font-face {
-            font-family: 'Minecraft-UI';
-            /* Using a clean fallback for the pixel font look */
-            font-weight: normal;
-            font-style: normal;
-        }
         body {
-            font-family: 'Minecraft-UI', 'Inter', sans-serif;
+            /* Setze die Pixel-Schriftart für das gesamte Spiel */
+            font-family: 'Press Start 2P', 'Inter', sans-serif;
             background-color: #3c3c3c; /* Inventory Background Dark Gray */
             color: #1f1f1f; 
             display: flex;
-            justify-content: center;
+            flex-direction: column; /* Damit der Titel oben steht */
+            align-items: center; /* Zentriert den Inhalt */
             padding: 20px;
         }
         .container {
             max-width: 600px;
             width: 100%;
         }
+
+        /* Styling für das Titelbild */
+        .game-title-image {
+            max-width: 100%; /* Stellt sicher, dass es nicht über den Bildschirm hinausgeht */
+            height: auto; /* Behält das Seitenverhältnis bei */
+            display: block; /* Entfernt zusätzlichen Platz unter dem Bild */
+            margin-bottom: 20px; /* Abstand zum Rest des Inhalts */
+            image-rendering: pixelated; /* Für einen knackigen Pixel-Look */
+            width: 2048px; /* Originalbreite, wird durch max-width begrenzt */
+            height: 448px; /* Originalhöhe, wird durch max-width und auto-height angepasst */
+            object-fit: contain; /* Stellt sicher, dass das gesamte Bild sichtbar ist */
+        }
+
 
         /* The Main Card (Inventory/Crafting Table Window) */
         .mc-window {
@@ -148,7 +159,7 @@
         .mc-slot.material-empty {
             background-color: #555555;
             color: #c6c6c6;
-            font-size: 0.75rem;
+            font-size: 0.5rem; /* Kleinere Schriftgröße, um Platz zu sparen */
         }
 
         /* --- General UI Elements --- */
@@ -159,6 +170,8 @@
             text-shadow: 1px 1px 0 #fff;
             padding-left: 5px;
             margin-bottom: 5px;
+            /* Wichtig: Schriftgröße für Pixel-Font anpassen */
+            font-size: 0.6rem; 
         }
         .mc-button {
             border: 2px solid #000;
@@ -169,6 +182,7 @@
             padding: 8px;
             text-shadow: 1px 1px 0 #fff;
             image-rendering: pixelated;
+            font-size: 0.6rem; /* Wichtig: Schriftgröße für Pixel-Font anpassen */
         }
         .mc-button:hover:not(:disabled) {
             background-color: #9c9c9c;
@@ -185,89 +199,84 @@
             cursor: not-allowed;
             text-shadow: none;
         }
+        #targetItemName {
+             /* Die Schriftart für den aufgedeckten Item-Namen sollte etwas größer sein */
+            font-size: 0.8rem; 
+        }
+        #instructions h2 {
+            font-size: 0.7rem;
+        }
+        #instructions ul {
+            font-size: 0.55rem;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
 
+    <!-- Ihr Titelbild wird hier geladen --><img src="titel.png" alt="Minecraft Craftle" class="game-title-image" width="2048" height="448">
+
     <div class="container">
-        <h1 class="text-3xl font-bold text-center mb-6 text-yellow-300">Minecraft Craftle</h1>
         
-        <!-- UI Card/Window Start -->
-        <div class="mc-window shadow-2xl">
+        <!-- UI Card/Window Start --><div class="mc-window shadow-2xl">
             
-            <!-- Target Item Info (Titled like the Inventory Title) -->
-            <div class="mc-title mb-4">
-                <span class="text-base text-gray-700">Crafting für:</span> 
+            <!-- Target Item Info (Titled like the Inventory Title) --><div class="mc-title mb-4">
+                <span class="text-base text-gray-700">CRAFTING FÜR:</span> 
                 <span id="targetItemName" class="font-bold text-xl text-orange-700">???</span>
             </div>
 
-            <!-- Crafting Area: 3x3 Grid, Arrow, and Result Slot -->
-            <div class="flex items-start justify-center mb-6">
-                <!-- 3x3 Crafting Grid Container -->
-                <div id="currentGuessGrid" class="mc-grid">
-                    <!-- Grid slots are generated here -->
-                </div>
+            <!-- Crafting Area: 3x3 Grid, Arrow, and Result Slot --><div class="flex items-start justify-center mb-6">
+                <!-- 3x3 Crafting Grid Container --><div id="currentGuessGrid" class="mc-grid">
+                    <!-- Grid slots are generated here --></div>
 
-                <!-- Arrow -->
-                <div class="mc-arrow-container">
+                <!-- Arrow --><div class="mc-arrow-container">
                     <div class="mc-arrow"></div>
                 </div>
 
-                <!-- Result Slot -->
-                <div id="resultSlot" class="mc-slot">
+                <!-- Result Slot --><div id="resultSlot" class="mc-slot">
                     <span id="resultContent" class="text-xl font-bold text-gray-400">?</span>
                 </div>
             </div>
 
-            <!-- Material Picker Area (Inventory Section) -->
-            <div class="mc-title mt-4">Materialien (Inventory)</div>
+            <!-- Material Picker Area (Inventory Section) --><div class="mc-title mt-4">MATERIALIEN (INVENTORY)</div>
             <div id="materialPicker" class="grid mc-inventory-grid">
-                <!-- Material buttons are generated here -->
-            </div>
+                <!-- Material buttons are generated here --></div>
 
-            <!-- Aktions-Buttons -->
-            <div class="flex flex-col space-y-4 mt-6">
+            <!-- Aktions-Buttons --><div class="flex flex-col space-y-4 mt-6">
                 <button id="submitButton" class="mc-button text-lg" disabled>
-                    Rezept prüfen (0/6)
+                    REZEPT PRÜFEN (0/6)
                 </button>
             </div>
             
-            <!-- Bisherige Versuche (Feedback) -->
-            <div class="mc-title mt-6 text-xl">Bisherige Versuche:</div>
+            <!-- Bisherige Versuche (Feedback) --><div class="mc-title mt-6 text-xl">BISHERIGE VERSUCHE:</div>
             <div id="attemptsContainer" class="space-y-3 p-2 border border-gray-500 rounded-sm">
-                <!-- Previous attempts will be displayed here -->
-            </div>
+                <!-- Previous attempts will be displayed here --></div>
 
             <button id="restartButton" class="mc-button mt-4 w-full hidden">
-                Neues Spiel starten
+                NEUES SPIEL STARTEN
             </button>
 
         </div> 
-        <!-- UI Card/Window End -->
-
-        <!-- Instructions (Outside the Main Window for simplicity) -->
-        <div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white text-sm">
-            <h2 class="text-xl font-bold mb-2">Anleitung</h2>
+        <!-- UI Card/Window End --><!-- Instructions (Outside the Main Window for simplicity) --><div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white">
+            <h2 class="font-bold mb-2">ANLEITUNG</h2>
             <ul class="list-disc list-inside space-y-1">
-                <li>Wähle unten ein Material (oder "Leer") aus und platziere es in das 3x3-Gitter.</li>
-                <li>Du kannst ein Rezept prüfen, sobald du **mindestens ein Material** platziert hast.</li>
-                <li>**Feedback**: Grün = Material & Position richtig. Gelb = Material richtig, Position falsch. Grau = Material nicht im Rezept.</li>
+                <li>WÄHLE UNTEN EIN MATERIAL (ODER "LEER") AUS UND PLATZIERE ES IN DAS 3X3-GITTER.</li>
+                <li>DU KANNST EIN REZEPT PRÜFEN, SOBALD DU **MINDESTENS EIN MATERIAL** PLATZIERT HAST.</li>
+                <li>**FEEDBACK**: GRÜN = MATERIAL & POSITION RICHTIG. GELB = MATERIAL RICHTIG, POSITION FALSCH. GRAU = MATERIAL NICHT IM REZEPT.</li>
             </ul>
         </div>
 
     </div>
 
-    <!-- Modal für Spielende/Sieg (Styled as a Minecraft dialog) -->
-    <div id="modalOverlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <!-- Modal für Spielende/Sieg (Styled as a Minecraft dialog) --><div id="modalOverlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div id="modalContent" class="mc-window p-8 w-11/12 max-w-md text-center border-4 border-black">
             <h3 id="modalTitle" class="text-3xl font-bold mb-4 text-orange-700 text-shadow-lg"></h3>
             <p id="modalMessage" class="mb-6 text-lg"></p>
             <div class="bg-gray-400 p-3 mb-6 border border-gray-500">
-                <p class="text-sm font-semibold mb-2">Das korrekte Rezept für: <span id="modalTargetName" class="font-bold"></span></p>
+                <p class="text-sm font-semibold mb-2">DAS KORREKTE REZEPT FÜR: <span id="modalTargetName" class="font-bold"></span></p>
                 <div id="correctRecipeDisplay" class="mc-grid mx-auto max-w-[156px]"></div>
             </div>
             <button onclick="restartGame()" class="mc-button py-2 px-6">
-                Neues Spiel starten
+                NEUES SPIEL STARTEN
             </button>
         </div>
     </div>
@@ -279,9 +288,9 @@
         let gameState = {};
 
         const materialMap = {
-            // HIER IST DIE KORREKTUR: "Holzbretter.png" wurde zu "Eichenholzbretter.png"
+            // Die Dateinamen und Größen entsprechen den Benutzerangaben
             'E': { name: 'Leer', fileName: 'Leer.png', size: '160x160', mcColor: '#8b8b8b' },
-            'W': { name: 'Holz', fileName: 'Eichenholzbretter.png', size: '300x300', mcColor: '#a0522d' }, // <-- Korrigierter Dateiname
+            'W': { name: 'Holz', fileName: 'Eichenholzbretter.png', size: '300x300', mcColor: '#a0522d' },
             'C': { name: 'Stein', fileName: 'Bruchstein.png', size: '300x300', mcColor: '#808080' },
             'I': { name: 'Eisen', fileName: 'Eisenbarren.png', size: '160x160', mcColor: '#c0c0c0' },
             'S': { name: 'Stock', fileName: 'Stock.png', size: '160x160', mcColor: '#7a5230' },
@@ -371,7 +380,7 @@
             };
 
             targetItemNameEl.textContent = '???';
-            submitButton.textContent = `Rezept prüfen (0/${MAX_ATTEMPTS})`;
+            submitButton.textContent = `REZEPT PRÜFEN (0/${MAX_ATTEMPTS})`;
             submitButton.disabled = false;
             restartButtonEl.classList.add('hidden');
             attemptsContainerEl.innerHTML = '';
@@ -416,7 +425,7 @@
                 // Der "Leer"-Slot ist ein Button, aber ohne Bild
                 if (id === 'E') {
                     button.className = `mc-slot material-button material-empty font-semibold ${gameState.selectedMaterial === id ? 'material-active' : ''}`;
-                    button.textContent = 'Leer';
+                    button.textContent = 'LEER';
                 } else {
                     // Normale Material-Buttons
                     button.className = `mc-slot material-button font-semibold ${gameState.selectedMaterial === id ? 'material-active' : ''}`;
@@ -505,7 +514,7 @@
         function updateSubmitButtonState() {
             const isAnyMaterialPlaced = gameState.currentGuess.some(id => id !== 'E');
             submitButton.disabled = !isAnyMaterialPlaced || gameState.gameOver;
-            submitButton.textContent = `Rezept prüfen (${gameState.attemptCount}/${MAX_ATTEMPTS})`;
+            submitButton.textContent = `REZEPT PRÜFEN (${gameState.attemptCount}/${MAX_ATTEMPTS})`;
         }
 
         // --- Logik ---
@@ -557,7 +566,7 @@
             
             // Item-Namen aufdecken, falls Feedback gegeben wurde
             if (hasNonGrayFeedback && targetItemNameEl.textContent === '???') {
-                targetItemNameEl.textContent = gameState.targetItem;
+                targetItemNameEl.textContent = gameState.targetItem.toUpperCase();
             }
 
             gameState.attempts.push({ guess: gameState.currentGuess, feedback: feedback });
@@ -588,17 +597,17 @@
             gameState.gameOver = true;
             submitButton.disabled = true;
             restartButtonEl.classList.remove('hidden');
-            modalTargetName.textContent = gameState.targetItem;
+            modalTargetName.textContent = gameState.targetItem.toUpperCase();
             renderCorrectRecipe(gameState.targetRecipe, correctRecipeDisplay);
 
             if (won) {
                 modalTitle.textContent = "GEWONNEN!";
-                modalMessage.textContent = `Herzlichen Glückwunsch! Du hast das Rezept für die ${gameState.targetItem} in ${gameState.attemptCount} Versuchen erraten.`;
+                modalMessage.textContent = `HERZLICHEN GLÜCKWUNSCH! DU HAST DAS REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} IN ${gameState.attemptCount} VERSUCHEN ERRATEN.`;
                 modalTitle.classList.remove('text-red-700');
                 modalTitle.classList.add('text-green-700');
             } else {
                 modalTitle.textContent = "SPIEL VORBEI!";
-                modalMessage.textContent = `Schade, das korrekte Rezept für die ${gameState.targetItem} war:`;
+                modalMessage.textContent = `SCHADE, DAS KORREKTE REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} WAR:`;
                 modalTitle.classList.remove('text-green-700');
                 modalTitle.classList.add('text-red-700');
             }
