@@ -192,6 +192,22 @@
             font-size: 1rem;
             padding: 20px;
         }
+
+        /* Styling für den Namensinput, im Minecraft-Stil */
+        .mc-input {
+            border: 2px solid #000;
+            background-color: #555555;
+            color: #fff;
+            font-weight: bold;
+            padding: 6px;
+            box-shadow: inset 1px 1px 0 0 #000, inset -1px -1px 0 0 #fff;
+            font-family: 'Press Start 2P', sans-serif;
+            font-size: 0.6rem;
+            outline: none;
+        }
+        .mc-input::placeholder {
+            color: #8b8b8b;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -203,81 +219,104 @@
             Lade Spiel und verbinde mit Firebase...
         </div>
 
-        <div id="gameContainer" class="mc-window shadow-2xl hidden">
+        <!-- HAUPT-SPIELANSICHT -->
+        <div id="mainGameView">
+            <div id="gameContainer" class="mc-window shadow-2xl hidden">
+                
+                <div class="mc-title mb-2 text-center text-base text-gray-700" id="modeTitle">
+                    — Craftle wird geladen —
+                </div>
+
+                <div class="mc-title mb-4 text-center">
+                    <span class="text-base text-gray-700">CRAFTING FÜR:</span> 
+                    <span id="targetItemName" class="font-bold text-xl text-orange-700">???</span>
+                </div>
+
+                <div class="flex items-start justify-center mb-6" style="align-items: center;">
+                    <div id="currentGuessGrid" class="mc-grid">
+                        <!-- Crafting Grid -->
+                    </div>
+
+                    <div class="mc-arrow-container">
+                        <img id="craftingArrow" src="Pfeil.png" alt="Crafting Arrow" class="crafting-arrow-img">
+                    </div>
+
+                    <div id="resultSlot" class="mc-slot">
+                        <span id="resultContent" class="text-xl font-bold text-gray-400">?</span>
+                    </div>
+                </div>
+
+                <div class="mc-title mt-4">MATERIALIEN (INVENTORY)</div>
+                <div id="materialPicker" class="grid mc-inventory-grid">
+                    <!-- Material Picker -->
+                </div>
+
+                <div class="flex flex-col space-y-4 mt-6">
+                    <button id="submitButton" class="mc-button text-lg" disabled>
+                        REZEPT PRÜFEN (0/6)
+                    </button>
+                </div>
+                
+                <div class="mc-title mt-6 text-xl">BISHERIGE VERSUCHE:</div>
+                <div id="attemptsContainer" class="space-y-3 p-2 border border-gray-500 rounded-sm">
+                    <!-- Attempt History -->
+                </div>
+
+                <div class="flex space-x-2 mt-4 justify-center">
+                    <button id="randomGameButton" class="mc-button">
+                        ZUFÄLLIGES SPIEL STARTEN
+                    </button>
+                    <button id="dailyGameButton" class="mc-button hidden">
+                        ZUM TÄGLICHEN CRAFTLE
+                    </button>
+                    <button id="leaderboardButton" class="mc-button">
+                        RANGLISTE ANZEIGEN
+                    </button>
+                </div>
+
+            </div> 
             
-            <div class="mc-title mb-2 text-center text-base text-gray-700" id="modeTitle">
-                — Craftle wird geladen —
+            <div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white">
+                <h2 class="font-bold mb-2">ANLEITUNG</h2>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>WÄHLE UNTEN EIN MATERIAL (ODER "LEER") AUS UND PLATZIERE ES IN DAS 3X3-GITTER.</li>
+                    <li>DU KANNST EIN REZEPT PRÜFEN, SOBALD DU **MINDESTENS EIN MATERIAL** PLATZIERT HAST.</li>
+                    <li>**FEEDBACK**: GRÜN = MATERIAL & POSITION RICHTIG. GELB = MATERIAL RICHTIG, POSITION FALSCH. GRAU = MATERIAL NICHT IM REZEPT.</li>
+                </ul>
             </div>
-
-            <div class="mc-title mb-4 text-center">
-                <span class="text-base text-gray-700">CRAFTING FÜR:</span> 
-                <span id="targetItemName" class="font-bold text-xl text-orange-700">???</span>
-            </div>
-
-            <div class="flex items-start justify-center mb-6" style="align-items: center;">
-                <div id="currentGuessGrid" class="mc-grid">
-                    <!-- Crafting Grid -->
-                </div>
-
-                <div class="mc-arrow-container">
-                    <img id="craftingArrow" src="Pfeil.png" alt="Crafting Arrow" class="crafting-arrow-img">
-                </div>
-
-                <div id="resultSlot" class="mc-slot">
-                    <span id="resultContent" class="text-xl font-bold text-gray-400">?</span>
-                </div>
-            </div>
-
-            <div class="mc-title mt-4">MATERIALIEN (INVENTORY)</div>
-            <div id="materialPicker" class="grid mc-inventory-grid">
-                <!-- Material Picker -->
-            </div>
-
-            <div class="flex flex-col space-y-4 mt-6">
-                <button id="submitButton" class="mc-button text-lg" disabled>
-                    REZEPT PRÜFEN (0/6)
-                </button>
-            </div>
-            
-            <div class="mc-title mt-6 text-xl">BISHERIGE VERSUCHE:</div>
-            <div id="attemptsContainer" class="space-y-3 p-2 border border-gray-500 rounded-sm">
-                <!-- Attempt History -->
-            </div>
-
-            <!-- NEUER BUTTON HINZUGEFÜGT UND KLASSEN ANGEPASST -->
-            <div class="flex space-x-2 mt-4 justify-center">
-                <button id="randomGameButton" class="mc-button">
-                    ZUFÄLLIGES SPIEL STARTEN
-                </button>
-                <button id="dailyGameButton" class="mc-button hidden">
-                    ZUM TÄGLICHEN CRAFTLE
-                </button>
-                <button id="leaderboardButton" class="mc-button">
-                    RANGLISTE ANZEIGEN
-                </button>
-            </div>
-
-        </div> 
-        
-        <div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white">
-            <h2 class="font-bold mb-2">ANLEITUNG</h2>
-            <ul class="list-disc list-inside space-y-1">
-                <li>WÄHLE UNTEN EIN MATERIAL (ODER "LEER") AUS UND PLATZIERE ES IN DAS 3X3-GITTER.</li>
-                <li>DU KANNST EIN REZEPT PRÜFEN, SOBALD DU **MINDESTENS EIN MATERIAL** PLATZIERT HAST.</li>
-                <li>**FEEDBACK**: GRÜN = MATERIAL & POSITION RICHTIG. GELB = MATERIAL RICHTIG, POSITION FALSCH. GRAU = MATERIAL NICHT IM REZEPT.</li>
-            </ul>
         </div>
+        <!-- ENDE HAUPT-SPIELANSICHT -->
         
-        <!-- NEUER RANGLISTEN CONTAINER -->
+        <!-- RANGLISTEN CONTAINER (Standardmäßig versteckt) -->
         <div id="leaderboardContainer" class="mc-window shadow-2xl mt-6 hidden">
             <div class="mc-title mb-4 text-center text-lg text-gray-700">
                 RANGLISTE HEUTE (<span id="leaderboardDate">Datum</span>)
             </div>
+
+            <!-- NAME EINGABE BEREICH -->
+            <div class="p-3 mb-4 bg-gray-500/50 rounded-sm">
+                <p class="mc-title mb-2 text-center text-white text-xs">DEIN SPIELERNAME (max. 10 Zeichen)</p>
+                <div class="flex space-x-2">
+                    <input type="text" id="displayNameInput" class="mc-input w-full" maxlength="10" placeholder="Max Mustermann">
+                    <button id="saveDisplayNameButton" class="mc-button px-4 py-2 flex-shrink-0">
+                        SPEICHERN
+                    </button>
+                </div>
+                <p id="nameFeedback" class="text-center text-xs text-green-700 mt-1 hidden">Gespeichert!</p>
+            </div>
+            <!-- ENDE NAME EINGABE BEREICH -->
+
             <div id="leaderboardList" class="space-y-2 text-xs">
                 <!-- Leaderboard items will be rendered here -->
             </div>
             <p id="leaderboardLoading" class="text-center text-sm text-gray-600 mt-4">Lade Rangliste...</p>
             <p id="leaderboardError" class="text-center text-sm text-red-600 hidden mt-4">Fehler beim Laden der Rangliste.</p>
+
+            <div class="flex justify-center mt-6">
+                 <button id="backButton" class="mc-button py-2 px-6">
+                    ← ZURÜCK
+                </button>
+            </div>
         </div>
         <!-- ENDE RANGLISTEN CONTAINER -->
 
@@ -322,12 +361,15 @@
         // Konstanten
         const MAX_ATTEMPTS = 6;
         const CRAFTLE_APP_ID = YOUR_FIREBASE_CONFIG.projectId; 
+        const DEFAULT_DISPLAY_NAME = "Anonymer Spieler"; // Fallback-Name
 
         // Globale Variablen
         let gameState = {};
         let craftSound;
         let app, db, auth;
         let userId = null; 
+        let currentDisplayName = DEFAULT_DISPLAY_NAME; // NEU: Speichert den geladenen Namen
+
         
         // --- Material- und Rezepte-Daten (unverändert) ---
         const materialMap = {
@@ -360,20 +402,19 @@
         const attemptsContainerEl = document.getElementById('attemptsContainer');
         const randomGameButton = document.getElementById('randomGameButton');
         const dailyGameButton = document.getElementById('dailyGameButton');
-        const leaderboardButton = document.getElementById('leaderboardButton'); // NEU
-        const leaderboardContainerEl = document.getElementById('leaderboardContainer'); // NEU
-        const leaderboardListEl = document.getElementById('leaderboardList'); // NEU
-        const leaderboardLoadingEl = document.getElementById('leaderboardLoading'); // NEU
-        const leaderboardErrorEl = document.getElementById('leaderboardError'); // NEU
+        const leaderboardButton = document.getElementById('leaderboardButton'); 
+        const leaderboardContainerEl = document.getElementById('leaderboardContainer'); 
+        const leaderboardListEl = document.getElementById('leaderboardList'); 
+        const leaderboardLoadingEl = document.getElementById('leaderboardLoading'); 
+        const leaderboardErrorEl = document.getElementById('leaderboardError'); 
         const modalOverlay = document.getElementById('modalOverlay');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
-        const modalTargetName = document.getElementById('modalTargetName');
-        const correctRecipeDisplay = document.getElementById('correctRecipeDisplay');
-        const modeTitleEl = document.getElementById('modeTitle');
-        const loadingOverlayEl = document.getElementById('loadingOverlay');
-        const gameContainerEl = document.getElementById('gameContainer');
         const modalRestartButton = document.getElementById('modalRestartButton');
+        const mainGameView = document.getElementById('mainGameView'); // NEU: Hauptansicht
+        const backButton = document.getElementById('backButton'); // NEU: Zurück Button
+        const displayNameInput = document.getElementById('displayNameInput'); // NEU: Name Input
+        const saveDisplayNameButton = document.getElementById('saveDisplayNameButton'); // NEU: Name Speichern Button
+        const nameFeedback = document.getElementById('nameFeedback'); // NEU: Name Feedback
+
 
         
         // --- Firebase Initialisierung und Auth ---
@@ -394,8 +435,11 @@
 
                 console.log("Firebase initialized. User ID:", userId);
                 
+                // Lade den gespeicherten Namen, bevor das Spiel startet
+                await loadDisplayName(); 
+                
                 loadingOverlayEl.classList.add('hidden');
-                gameContainerEl.classList.remove('hidden');
+                document.getElementById('gameContainer').classList.remove('hidden');
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
@@ -404,7 +448,7 @@
                 // Fallback: Starte zufälliges Spiel ohne DB
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 loadingOverlayEl.classList.add('hidden');
-                gameContainerEl.classList.remove('hidden');
+                document.getElementById('gameContainer').classList.remove('hidden');
                 startCraftle('random');
                 return;
             }
@@ -418,6 +462,54 @@
         function getDateString() {
             // Holt das aktuelle Datum im Format YYYY-MM-DD
             return new Date().toISOString().split('T')[0];
+        }
+        
+        // NEU: Lädt den gespeicherten Anzeigenamen des Benutzers
+        async function loadDisplayName() {
+            if (!userId) return;
+            
+            // Pfad: /artifacts/{CRAFTLE_APP_ID}/users/{userId}/settings/profile
+            const docRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/users/${userId}/settings`, 'profile');
+            
+            try {
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().displayName) {
+                    currentDisplayName = docSnap.data().displayName;
+                    displayNameInput.value = currentDisplayName; // Inputfeld setzen
+                } else {
+                    // Fallback: Gekürzte ID verwenden, wenn kein Name gesetzt ist
+                    currentDisplayName = `Spieler ${userId.substring(0, 4)}`;
+                    displayNameInput.placeholder = currentDisplayName;
+                }
+            } catch (error) {
+                console.warn("Could not load display name:", error);
+            }
+        }
+        
+        // NEU: Speichert den Anzeigenamen des Benutzers
+        async function saveDisplayName(name) {
+            if (!userId || !name || name.length === 0) return;
+            
+            const sanitizedName = name.substring(0, 10);
+            currentDisplayName = sanitizedName;
+            
+            // Pfad: /artifacts/{CRAFTLE_APP_ID}/users/{userId}/settings/profile
+            const docRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/users/${userId}/settings`, 'profile');
+            
+            try {
+                await setDoc(docRef, {
+                    displayName: sanitizedName,
+                    timestamp: serverTimestamp()
+                }, { merge: true });
+                
+                nameFeedback.textContent = 'Gespeichert!';
+                nameFeedback.classList.remove('hidden');
+                setTimeout(() => nameFeedback.classList.add('hidden'), 2000);
+            } catch (error) {
+                console.error("Error saving display name:", error);
+                nameFeedback.textContent = 'Fehler beim Speichern.';
+                nameFeedback.classList.remove('hidden');
+            }
         }
 
         async function getDailyRecipeIndex() {
@@ -447,8 +539,6 @@
                 }
             } catch (error) {
                 console.error("Error accessing/creating daily recipe in DB:", error);
-                // Zusätzliche Warnung zur Behebung des Permission-Fehlers
-                console.warn("FEHLER: Die Firestore-Sicherheitsregeln erlauben das Schreiben des TAGES-REZEPTS möglicherweise nicht. Bitte überprüfen Sie die Regeln für den Pfad: /artifacts/{appId}/public/data/daily_craftles/{date}");
                 
                 // Fallback auf zufälliges Rezept, wenn DB-Zugriff fehlschlägt
                 return Math.floor(Math.random() * recipes.length);
@@ -463,16 +553,13 @@
             const docRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/users/${userId}/daily_progress`, dateString);
 
             try {
-                // Wir speichern den gesamten Fortschritt, um ihn später wiederherzustellen
                 await setDoc(docRef, {
-                    attempts: JSON.stringify(attempts), // Arrays werden als JSON String gespeichert
+                    attempts: JSON.stringify(attempts), 
                     won: won,
                     timestamp: serverTimestamp()
                 }, { merge: true });
             } catch (error) {
                 console.error("Error saving daily progress:", error);
-                // Zusätzliche Warnung zur Behebung des Permission-Fehlers
-                console.warn("FEHLER: Die Firestore-Sicherheitsregeln erlauben das Speichern des FORTSCHRITTS möglicherweise nicht. Bitte überprüfen Sie die Regeln für den Pfad: /artifacts/{appId}/users/{userId}/daily_progress/{date}");
             }
         }
         
@@ -493,7 +580,7 @@
                     };
                 }
             } catch (error) {
-                console.warn("Could not load daily progress, starting fresh (Check your Firestore Rules if this persists):", error);
+                console.warn("Could not load daily progress, starting fresh:", error);
             }
             return null;
         }
@@ -508,8 +595,6 @@
 
             try {
                 const score = attempts.length;
-                // Anonyme Anzeige des Benutzers auf der Rangliste
-                const displayName = `Spieler ${userId.substring(0, 4)}`; 
 
                 // Prüfen, ob bereits ein besserer Score existiert
                 const docSnap = await getDoc(docRef);
@@ -518,19 +603,21 @@
                     return;
                 }
 
+                // Verwende den globalen currentDisplayName
+                const displayNameForLeaderboard = currentDisplayName.length > 0 ? currentDisplayName : `Spieler ${userId.substring(0, 4)}`;
+
                 // Speichern des neuen oder besseren Scores
                 await setDoc(docRef, {
                     userId: userId,
                     score: score,
-                    displayName: displayName,
+                    displayName: displayNameForLeaderboard, // Verwende den gespeicherten/aktuellen Namen
                     timestamp: serverTimestamp()
                 }, { merge: true });
                 
-                console.log(`Leaderboard result saved: ${score} attempts.`);
+                console.log(`Leaderboard result saved: ${score} attempts for ${displayNameForLeaderboard}.`);
 
             } catch (error) {
                 console.error("Error saving leaderboard result:", error);
-                console.warn("FEHLER: Rangliste Speichern fehlgeschlagen. Prüfen Sie die Regeln für den Pfad: /artifacts/{appId}/public/data/daily_leaderboards/{date}/scores/{userId}");
             }
         }
 
@@ -540,21 +627,18 @@
             let initialAttempts = [];
             let initialWon = false;
             
-            // Leaderboard bei Spielstart ausblenden
-            leaderboardContainerEl.classList.add('hidden');
+            hideLeaderboard(); // Stelle sicher, dass die Rangliste ausgeblendet ist.
 
             if (mode === 'daily') {
-                modeTitleEl.textContent = '— DAS CRAFTLE DES TAGES —';
+                document.getElementById('modeTitle').textContent = '— DAS CRAFTLE DES TAGES —';
                 const targetIndex = await getDailyRecipeIndex();
                 target = recipes[targetIndex];
                 
-                // Lade den gespeicherten Fortschritt
                 const progress = await loadDailyProgress();
                 if (progress) {
                     initialAttempts = progress.attempts;
                     initialWon = progress.won;
                     if (initialWon || initialAttempts.length >= MAX_ATTEMPTS) {
-                        // Spiel ist bereits beendet
                         gameState.targetRecipe = target.recipe;
                         gameState.targetItem = target.item;
                         gameState.attempts = initialAttempts;
@@ -563,7 +647,7 @@
                         
                         randomGameButton.classList.remove('hidden');
                         dailyGameButton.classList.add('hidden');
-                        return; // WICHTIG: Das Spiel nicht zurücksetzen, wenn es bereits beendet ist.
+                        return;
                     }
                 }
                 
@@ -571,7 +655,7 @@
                 dailyGameButton.classList.add('hidden');
                 
             } else {
-                modeTitleEl.textContent = '— ZUFÄLLIGES SPIEL —';
+                document.getElementById('modeTitle').textContent = '— ZUFÄLLIGES SPIEL —';
                 const randomIndex = Math.floor(Math.random() * recipes.length);
                 target = recipes[randomIndex];
                 randomGameButton.classList.add('hidden');
@@ -596,7 +680,6 @@
             attemptsContainerEl.innerHTML = '';
             modalOverlay.classList.add('hidden');
             
-            // Render vorherige Versuche (für Daily Craftle)
             gameState.attempts.forEach(attempt => {
                 renderAttempt(attempt.guess, attempt.feedback, true); // true = no animation
             });
@@ -606,7 +689,8 @@
             updateSubmitButtonState();
         }
 
-        // --- Hilfsfunktionen (unverändert) ---
+        // ... [Restliche Rendering Funktionen (getMaterialImageUrl, createMaterialImageElement, renderCurrentGuessGrid, renderMaterialPicker, renderAttempt, renderCorrectRecipe) bleiben unverändert, da sie nur visuelle Aufgaben haben] ...
+        
         function getMaterialImageUrl(materialId) {
             const material = materialMap[materialId];
             if (materialId === 'E') return ''; 
@@ -631,8 +715,6 @@
             return img;
         }
 
-
-        // --- Rendering Funktionen ---
 
         function renderCurrentGuessGrid() {
             currentGuessGridEl.innerHTML = '';
@@ -729,29 +811,38 @@
                 containerEl.appendChild(slot);
             });
         }
+        
+        // --- NEUE UI Umschaltfunktionen ---
+        function showLeaderboardView() {
+            mainGameView.classList.add('hidden');
+            leaderboardContainerEl.classList.remove('hidden');
+        }
+        
+        function hideLeaderboard() {
+            mainGameView.classList.remove('hidden');
+            leaderboardContainerEl.classList.add('hidden');
+        }
+
 
         // NEU: Funktion zum Anzeigen/Laden der Rangliste
         async function showLeaderboard() {
-            // Toggle visibility
-            const isVisible = !leaderboardContainerEl.classList.contains('hidden');
-            if (isVisible) {
-                leaderboardContainerEl.classList.add('hidden');
-                return;
-            }
-
-            leaderboardContainerEl.classList.remove('hidden');
+            showLeaderboardView(); // Umschalten der Ansicht
+            
             leaderboardListEl.innerHTML = '';
             leaderboardLoadingEl.classList.remove('hidden');
             leaderboardErrorEl.classList.add('hidden');
             
             const dateString = getDateString();
             document.getElementById('leaderboardDate').textContent = dateString;
-
+            
+            // Setze den aktuellen Namen im Inputfeld
+            displayNameInput.value = currentDisplayName.startsWith('Spieler') ? '' : currentDisplayName;
+            displayNameInput.placeholder = currentDisplayName;
+            
             // Public Path: /artifacts/{CRAFTLE_APP_ID}/public/data/daily_leaderboards/{YYYY-MM-DD}/scores
             const collectionRef = collection(db, `artifacts/${CRAFTLE_APP_ID}/public/data/daily_leaderboards/${dateString}/scores`);
             
             try {
-                // Alle Ergebnisse für heute abrufen
                 const querySnapshot = await getDocs(collectionRef);
                 const scores = [];
 
@@ -759,7 +850,6 @@
                     scores.push(doc.data());
                 });
 
-                // 1. Sortieren nach Score (aufsteigend: wenig Versuche ist besser)
                 scores.sort((a, b) => a.score - b.score);
                 
                 leaderboardLoadingEl.classList.add('hidden');
@@ -777,12 +867,14 @@
                     item.className = `flex justify-between p-2 rounded-sm border-2 border-gray-600 ${isCurrentUser ? 'bg-yellow-300 shadow-lg text-black' : 'bg-gray-400'}`;
                     
                     const rankText = rank <= 3 ? (rank === 1 ? '🏆' : (rank === 2 ? '🥈' : '🥉')) : `${rank}.`;
+                    
+                    // Name für die Anzeige: Entweder den gespeicherten Namen oder den Fallback
+                    const displayedName = entry.displayName || `Spieler ${entry.userId.substring(0, 4)}`;
 
-                    // Der angezeigte Name ist der gekürzte User ID
                     item.innerHTML = `
                         <span class="font-bold w-1/6 text-left">${rankText}</span>
                         <span class="w-3/6 truncate font-semibold">
-                            ${entry.displayName} ${isCurrentUser ? ' (DU)' : ''}
+                            ${displayedName} ${isCurrentUser ? ' (DU)' : ''}
                         </span>
                         <span class="font-bold w-2/6 text-right">${entry.score} Versuche</span>
                     `;
@@ -824,7 +916,12 @@
         submitButton.addEventListener('click', checkRecipe);
         randomGameButton.addEventListener('click', () => startCraftle('random'));
         dailyGameButton.addEventListener('click', () => startCraftle('daily'));
-        leaderboardButton.addEventListener('click', showLeaderboard); // NEU: Leaderboard Button Event
+        leaderboardButton.addEventListener('click', showLeaderboard);
+        backButton.addEventListener('click', hideLeaderboard); // NEU: Zurück-Button
+        
+        saveDisplayNameButton.addEventListener('click', () => { // NEU: Speichern des Namens
+            saveDisplayName(displayNameInput.value.trim());
+        });
         
         // BUG FIX: Nach Spielende (auch Daily) soll der Restart-Button immer ein frisches ZUFÄLLIGES Spiel starten.
         modalRestartButton.addEventListener('click', () => {
@@ -913,34 +1010,35 @@
                 }
             }
             
+            // ... [Anzeige des Modals]
+            // ... [Restlicher Code der endGame-Funktion]
             targetItemNameEl.textContent = gameState.targetItem.toUpperCase(); 
-            modalTargetName.textContent = gameState.targetItem.toUpperCase();
+            document.getElementById('modalTitle').textContent = won ? "GEWONNEN!" : "SPIEL VORBEI!";
+            document.getElementById('modalMessage').textContent = won 
+                ? `HERZLICHEN GLÜCKWUNSCH! DU HAST DAS REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} IN ${gameState.attemptCount} VERSUCHEN ERRATEN.`
+                : `SCHADE, DAS KORREKTE REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} WAR:`;
+
+            document.getElementById('modalTargetName').textContent = gameState.targetItem.toUpperCase();
             renderCorrectRecipe(gameState.targetRecipe, correctRecipeDisplay);
 
+            const modalTitleEl = document.getElementById('modalTitle');
             if (won) {
-                modalTitle.textContent = "GEWONNEN!";
-                modalMessage.textContent = `HERZLICHEN GLÜCKWUNSCH! DU HAST DAS REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} IN ${gameState.attemptCount} VERSUCHEN ERRATEN.`;
-                modalTitle.classList.remove('text-red-700');
-                modalTitle.classList.add('text-green-700');
-                
-                // Audio-Fix: Behandeln von Wiedergabefehlern in eingeschränkten Umgebungen
-                if (craftSound) { 
-                    craftSound.currentTime = 0; 
-                    craftSound.play().catch(e => {
-                        // Ignoriere typische Fehler in eingeschränkten Umgebungen (wie iFrames)
-                        if (e.name === 'NotAllowedError' || e.message.includes('The operation is not supported')) {
-                            console.warn("WARNUNG: Audiowiedergabe blockiert oder wird in dieser Umgebung nicht unterstützt.");
-                        } else {
-                            console.error("Fehler beim Abspielen des Craft-Sounds:", e);
-                        }
-                    }); 
-                }
-
+                modalTitleEl.classList.remove('text-red-700');
+                modalTitleEl.classList.add('text-green-700');
             } else {
-                modalTitle.textContent = "SPIEL VORBEI!";
-                modalMessage.textContent = `SCHADE, DAS KORREKTE REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} WAR:`;
-                modalTitle.classList.remove('text-green-700');
-                modalTitle.classList.add('text-red-700');
+                modalTitleEl.classList.remove('text-green-700');
+                modalTitleEl.classList.add('text-red-700');
+            }
+
+            if (craftSound) { 
+                craftSound.currentTime = 0; 
+                craftSound.play().catch(e => {
+                    if (e.name === 'NotAllowedError' || e.message.includes('The operation is not supported')) {
+                        console.warn("WARNUNG: Audiowiedergabe blockiert.");
+                    } else {
+                        console.error("Fehler beim Abspielen des Craft-Sounds:", e);
+                    }
+                }); 
             }
 
             modalOverlay.classList.remove('hidden');
