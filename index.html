@@ -33,10 +33,10 @@
             max-width: 100%; /* Stellt sicher, dass es nicht über den Bildschirm hinausgeht */
             height: auto; /* Behält das Seitenverhältnis bei */
             display: block; /* Entfernt zusätzlichen Platz unter dem Bild */
-            margin-bottom: 20px; /* Abstand zum Rest des Inhalts */
+            margin-bottom: 30px; /* Abstand zum Rest des Inhalts */
             image-rendering: pixelated; /* Für einen knackigen Pixel-Look */
-            width: 1024px; /* HALB so groß wie 2048px */
-            height: 224px; /* HALB so groß wie 448px */
+            width: 512px; /* HALB so groß wie 2048px */
+            height: 112px; /* HALB so groß wie 448px */
             object-fit: contain; /* Stellt sicher, dass das gesamte Bild sichtbar ist */
         }
 
@@ -404,8 +404,6 @@
 
 
         // --- Initialisierung ---
-
-        // Der DOMContentLoaded-Listener wurde durch window.onload ersetzt, um sicherzustellen, dass das Audio-Objekt vor initGame erstellt wird.
         
         function initGame() {
             const randomIndex = Math.floor(Math.random() * recipes.length);
@@ -566,13 +564,8 @@
         function checkRecipe() {
             if (gameState.gameOver || submitButton.disabled) return;
 
-            // Spiele den Crafting-Sound ab
-            if (craftSound) {
-                // Setze die Zeit auf 0, um den Sound erneut abspielen zu können, auch wenn er noch läuft
-                craftSound.currentTime = 0; 
-                craftSound.play().catch(e => console.error("Error playing craft sound:", e));
-            }
-
+            // Der Sound wird NICHT mehr hier abgespielt. Er wird nur bei einem Gewinn abgespielt (siehe endGame).
+            
             const guess = [...gameState.currentGuess];
             const target = [...gameState.targetRecipe];
             const feedback = Array(9).fill(null);
@@ -650,6 +643,12 @@
             renderCorrectRecipe(gameState.targetRecipe, correctRecipeDisplay);
 
             if (won) {
+                // Spiele den Crafting-Sound nur bei einem Sieg ab!
+                if (craftSound) {
+                    craftSound.currentTime = 0; 
+                    craftSound.play().catch(e => console.error("Error playing craft sound:", e));
+                }
+
                 modalTitle.textContent = "GEWONNEN!";
                 modalMessage.textContent = `HERZLICHEN GLÜCKWUNSCH! DU HAST DAS REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} IN ${gameState.attemptCount} VERSUCHEN ERRATEN.`;
                 modalTitle.classList.remove('text-red-700');
