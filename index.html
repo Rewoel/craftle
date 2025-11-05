@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minecraft Craftle: Tägliche Herausforderung</title>
-    <!-- AKTUALISIERT: Verwendet jetzt die vom Benutzer bereitgestellte Favicon-Datei. -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <!-- Favicon wird jetzt über die hochgeladene Datei geladen -->
+    <link rel="icon" type="image/png" href="favicon.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -244,13 +244,16 @@
                 <!-- Attempt History -->
             </div>
 
-            <!-- GEÄNDERTE KLASSEN FÜR ZENTRIERUNG -->
+            <!-- NEUER BUTTON HINZUGEFÜGT UND KLASSEN ANGEPASST -->
             <div class="flex space-x-2 mt-4 justify-center">
                 <button id="randomGameButton" class="mc-button">
                     ZUFÄLLIGES SPIEL STARTEN
                 </button>
                 <button id="dailyGameButton" class="mc-button hidden">
                     ZUM TÄGLICHEN CRAFTLE
+                </button>
+                <button id="leaderboardButton" class="mc-button">
+                    RANGLISTE ANZEIGEN
                 </button>
             </div>
 
@@ -264,6 +267,20 @@
                 <li>**FEEDBACK**: GRÜN = MATERIAL & POSITION RICHTIG. GELB = MATERIAL RICHTIG, POSITION FALSCH. GRAU = MATERIAL NICHT IM REZEPT.</li>
             </ul>
         </div>
+        
+        <!-- NEUER RANGLISTEN CONTAINER -->
+        <div id="leaderboardContainer" class="mc-window shadow-2xl mt-6 hidden">
+            <div class="mc-title mb-4 text-center text-lg text-gray-700">
+                RANGLISTE HEUTE (<span id="leaderboardDate">Datum</span>)
+            </div>
+            <div id="leaderboardList" class="space-y-2 text-xs">
+                <!-- Leaderboard items will be rendered here -->
+            </div>
+            <p id="leaderboardLoading" class="text-center text-sm text-gray-600 mt-4">Lade Rangliste...</p>
+            <p id="leaderboardError" class="text-center text-sm text-red-600 hidden mt-4">Fehler beim Laden der Rangliste.</p>
+        </div>
+        <!-- ENDE RANGLISTEN CONTAINER -->
+
 
     </div>
 
@@ -284,10 +301,10 @@
 
 
     <script type="module">
-        // Importe für Firebase SDK v12.5.0
+        // Importe für Firebase SDK v12.5.0. 'collection', 'query' und 'getDocs' hinzugefügt.
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
         
         // --- 🔒 FIREBASE KONFIGURATION 🔒 ---
         // Dies ist die von Ihnen bereitgestellte Konfiguration.
@@ -304,7 +321,7 @@
 
         // Konstanten
         const MAX_ATTEMPTS = 6;
-        const CRAFTLE_APP_ID = YOUR_FIREBASE_CONFIG.projectId; // Verwende die Project ID als eindeutige App ID
+        const CRAFTLE_APP_ID = YOUR_FIREBASE_CONFIG.projectId; 
 
         // Globale Variablen
         let gameState = {};
@@ -343,6 +360,11 @@
         const attemptsContainerEl = document.getElementById('attemptsContainer');
         const randomGameButton = document.getElementById('randomGameButton');
         const dailyGameButton = document.getElementById('dailyGameButton');
+        const leaderboardButton = document.getElementById('leaderboardButton'); // NEU
+        const leaderboardContainerEl = document.getElementById('leaderboardContainer'); // NEU
+        const leaderboardListEl = document.getElementById('leaderboardList'); // NEU
+        const leaderboardLoadingEl = document.getElementById('leaderboardLoading'); // NEU
+        const leaderboardErrorEl = document.getElementById('leaderboardError'); // NEU
         const modalOverlay = document.getElementById('modalOverlay');
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
@@ -476,12 +498,51 @@
             return null;
         }
 
+        // NEU: Speichert das Ergebnis im öffentlichen Leaderboard
+        async function saveLeaderboardResult(attempts) {
+            if (!userId || gameState.mode !== 'daily' || !attempts || attempts.length === 0) return;
+            
+            const dateString = getDateString();
+            // Public Path: /artifacts/{CRAFTLE_APP_ID}/public/data/daily_leaderboards/{YYYY-MM-DD}/scores/{userId}
+            const docRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/public/data/daily_leaderboards/${dateString}/scores`, userId);
+
+            try {
+                const score = attempts.length;
+                // Anonyme Anzeige des Benutzers auf der Rangliste
+                const displayName = `Spieler ${userId.substring(0, 4)}`; 
+
+                // Prüfen, ob bereits ein besserer Score existiert
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().score <= score) {
+                    console.log("Existing score is better or equal. Not updating leaderboard.");
+                    return;
+                }
+
+                // Speichern des neuen oder besseren Scores
+                await setDoc(docRef, {
+                    userId: userId,
+                    score: score,
+                    displayName: displayName,
+                    timestamp: serverTimestamp()
+                }, { merge: true });
+                
+                console.log(`Leaderboard result saved: ${score} attempts.`);
+
+            } catch (error) {
+                console.error("Error saving leaderboard result:", error);
+                console.warn("FEHLER: Rangliste Speichern fehlgeschlagen. Prüfen Sie die Regeln für den Pfad: /artifacts/{appId}/public/data/daily_leaderboards/{date}/scores/{userId}");
+            }
+        }
+
         // --- Initialisierung des Spiels (Mode-abhängig) ---
         async function startCraftle(mode = 'daily') {
             let target;
             let initialAttempts = [];
             let initialWon = false;
             
+            // Leaderboard bei Spielstart ausblenden
+            leaderboardContainerEl.classList.add('hidden');
+
             if (mode === 'daily') {
                 modeTitleEl.textContent = '— DAS CRAFTLE DES TAGES —';
                 const targetIndex = await getDailyRecipeIndex();
@@ -669,6 +730,74 @@
             });
         }
 
+        // NEU: Funktion zum Anzeigen/Laden der Rangliste
+        async function showLeaderboard() {
+            // Toggle visibility
+            const isVisible = !leaderboardContainerEl.classList.contains('hidden');
+            if (isVisible) {
+                leaderboardContainerEl.classList.add('hidden');
+                return;
+            }
+
+            leaderboardContainerEl.classList.remove('hidden');
+            leaderboardListEl.innerHTML = '';
+            leaderboardLoadingEl.classList.remove('hidden');
+            leaderboardErrorEl.classList.add('hidden');
+            
+            const dateString = getDateString();
+            document.getElementById('leaderboardDate').textContent = dateString;
+
+            // Public Path: /artifacts/{CRAFTLE_APP_ID}/public/data/daily_leaderboards/{YYYY-MM-DD}/scores
+            const collectionRef = collection(db, `artifacts/${CRAFTLE_APP_ID}/public/data/daily_leaderboards/${dateString}/scores`);
+            
+            try {
+                // Alle Ergebnisse für heute abrufen
+                const querySnapshot = await getDocs(collectionRef);
+                const scores = [];
+
+                querySnapshot.forEach((doc) => {
+                    scores.push(doc.data());
+                });
+
+                // 1. Sortieren nach Score (aufsteigend: wenig Versuche ist besser)
+                scores.sort((a, b) => a.score - b.score);
+                
+                leaderboardLoadingEl.classList.add('hidden');
+                
+                if (scores.length === 0) {
+                    leaderboardListEl.innerHTML = '<p class="text-center text-sm text-gray-700 p-2">Noch keine Einträge für heute. Sei der Erste, der gewinnt!</p>';
+                    return;
+                }
+
+                // 2. Rendern der Liste
+                scores.forEach((entry, index) => {
+                    const isCurrentUser = entry.userId === userId;
+                    const rank = index + 1;
+                    const item = document.createElement('div');
+                    item.className = `flex justify-between p-2 rounded-sm border-2 border-gray-600 ${isCurrentUser ? 'bg-yellow-300 shadow-lg text-black' : 'bg-gray-400'}`;
+                    
+                    const rankText = rank <= 3 ? (rank === 1 ? '🏆' : (rank === 2 ? '🥈' : '🥉')) : `${rank}.`;
+
+                    // Der angezeigte Name ist der gekürzte User ID
+                    item.innerHTML = `
+                        <span class="font-bold w-1/6 text-left">${rankText}</span>
+                        <span class="w-3/6 truncate font-semibold">
+                            ${entry.displayName} ${isCurrentUser ? ' (DU)' : ''}
+                        </span>
+                        <span class="font-bold w-2/6 text-right">${entry.score} Versuche</span>
+                    `;
+                    leaderboardListEl.appendChild(item);
+                });
+
+            } catch (error) {
+                console.error("Error fetching leaderboard:", error);
+                leaderboardLoadingEl.classList.add('hidden');
+                leaderboardErrorEl.textContent = 'Fehler beim Laden: Überprüfe die Firestore-Regeln.';
+                leaderboardErrorEl.classList.remove('hidden');
+            }
+        }
+
+
         // --- Event Handler und Logik ---
 
         function handleSlotClick(index) {
@@ -695,6 +824,7 @@
         submitButton.addEventListener('click', checkRecipe);
         randomGameButton.addEventListener('click', () => startCraftle('random'));
         dailyGameButton.addEventListener('click', () => startCraftle('daily'));
+        leaderboardButton.addEventListener('click', showLeaderboard); // NEU: Leaderboard Button Event
         
         // BUG FIX: Nach Spielende (auch Daily) soll der Restart-Button immer ein frisches ZUFÄLLIGES Spiel starten.
         modalRestartButton.addEventListener('click', () => {
@@ -777,6 +907,10 @@
             // Speichere das Endergebnis (nur im Daily-Modus)
             if (gameState.mode === 'daily') {
                 saveDailyAttempts(gameState.attempts, won);
+                if (won) {
+                    // NEU: Speichere den Score im Leaderboard
+                    saveLeaderboardResult(gameState.attempts);
+                }
             }
             
             targetItemNameEl.textContent = gameState.targetItem.toUpperCase(); 
