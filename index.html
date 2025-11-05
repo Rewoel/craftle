@@ -218,6 +218,22 @@
             border-radius: 0;
             box-shadow: 1px 1px 0 0 #000, -1px -1px 0 0 #fff; 
         }
+        
+        /* Fallback Placeholder (für den ersten Buchstaben) */
+        .mc-head-placeholder {
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #8b8b8b; /* Slot-Hintergrund */
+            color: #1f1f1f;
+            border: 1px solid #000;
+            box-shadow: 1px 1px 0 0 #000, -1px -1px 0 0 #fff;
+            border-radius: 0;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -307,7 +323,7 @@
             <div class="p-3 mb-4 bg-gray-500/50 rounded-sm">
                 <p class="mc-title mb-2 text-center text-white text-xs">DEIN SPIELERNAME (max. 10 Zeichen)</p>
                 <div class="flex space-x-2 items-center">
-                    <!-- NEU: Spieler-Kopf-Icon für den aktuellen Benutzer -->
+                    <!-- NEU: Spieler-Kopf-Icon für den aktuellen Benutzer (mit ID) -->
                     <img id="currentUserHead" src="" alt="Dein Kopf" class="mc-head-icon flex-shrink-0" style="width: 32px; height: 32px;">
                     <input type="text" id="displayNameInput" class="mc-input w-full" maxlength="10" placeholder="Max Mustermann">
                     <button id="saveDisplayNameButton" class="mc-button px-4 py-2 flex-shrink-0">
@@ -434,21 +450,37 @@
         const nameChangesRemainingEl = document.getElementById('nameChangesRemainingEl'); 
         const currentUserHeadEl = document.getElementById('currentUserHead'); // NEU: Kopf des aktuellen Benutzers
         
-        // --- Minecraft Head Generator ---
-        const STEVE_UUID = '8667ba71b85a4004af54457a9734eed7'; // Fallback Steve Skin
+        // --- Minecraft Head Generator & Fallback (JETZT MINOTAR) ---
 
         /**
-         * Gibt die URL für den Minecraft-Kopf des Spielers zurück.
+         * Gibt die URL für den Minecraft-Kopf des Spielers zurück (Minotar).
          * @param {string} displayName 
          * @returns {string} Bild-URL
          */
         function getMinecraftHeadUrl(displayName) {
-            // Wenn der Name der anonyme Standardname ist, verwende Steve als Fallback
-            if (displayName.startsWith('Spieler ') || displayName === DEFAULT_DISPLAY_NAME) {
-                return `https://crafatar.com/avatars/${STEVE_UUID}?size=32&overlay`;
+            // Minotar verwendet den Namen. Für den anonymen Spieler nehmen wir 'Steve'.
+            let username = displayName;
+
+            if (displayName.startsWith('Spieler ') || displayName === DEFAULT_DISPLAY_NAME || displayName.length === 0) {
+                username = 'Steve';
             }
-            // Ansonsten versuche, den Kopf anhand des Namens abzurufen
-            return `https://crafatar.com/avatars/${displayName}?size=32&overlay`;
+            
+            // Minotar bietet Avatare und Helme. 'helm' zeigt den 3D-Kopf mit Overlay.
+            // Größe 32x32 Pixel
+            // Die URL ist: https://minotar.net/helm/{username}/32.png
+            return `https://minotar.net/helm/${username}/32.png`;
+        }
+        
+        /**
+         * Gibt die URL für einen Platzhalter-Kopf zurück (wenn Minecraft-Kopf fehlschlägt).
+         * @param {string} displayName 
+         * @returns {string} Bild-URL (placehold.co)
+         */
+        function getPlaceholderHeadUrl(displayName) {
+            const firstLetter = displayName.charAt(0).toUpperCase() || '?';
+            const bgColor = '8b8b8b'; // Grau wie ein Slot
+            const fgColor = '1f1f1f'; // Textfarbe
+            return `https://placehold.co/32x32/${bgColor}/${fgColor}?text=${firstLetter}`;
         }
 
 
@@ -521,8 +553,12 @@
             displayNameInput.value = currentDisplayName.startsWith('Spieler') ? '' : currentDisplayName;
             displayNameInput.placeholder = currentDisplayName;
             
-            // NEU: Setze das Minecraft Head Icon
+            // NEU: Setze das Minecraft Head Icon mit Fallback-Logik
             currentUserHeadEl.src = getMinecraftHeadUrl(currentDisplayName);
+            currentUserHeadEl.onerror = function() {
+                this.src = getPlaceholderHeadUrl(currentDisplayName);
+                this.onerror = null; // Verhindert eine Endlosschleife
+            };
             
             const hasScoreToday = await checkIfUserHasScoreToday();
 
@@ -564,7 +600,7 @@
                     const data = docSnap.data();
                     
                     // Lade Anzeigenamen
-                    if (data.displayName) {
+                    if (data.displayName && data.displayName.length > 0) {
                         currentDisplayName = data.displayName;
                     } else {
                         currentDisplayName = `Spieler ${userId.substring(0, 4)}`;
@@ -622,7 +658,7 @@
                     return;
                 }
             } 
-            // 2. Wenn kein Score eingereicht wurde, ist die Änderung kostenlos (kein Decrement)
+            // 2. Wenn kein Score eingereicht wurde, ist die Änderung immer erlaubt und kostenlos (kein Decrement)
 
             if (changeAllowed) {
                 
@@ -1025,14 +1061,23 @@
                     // Name für die Anzeige: Entweder den gespeicherten Namen oder den Fallback
                     const displayedName = entry.displayName || `Spieler ${entry.userId.substring(0, 4)}`;
                     
-                    // NEU: Hole die URL für den Kopf
+                    // NEU: Hole die URL für den Kopf (jetzt Minotar)
                     const headUrl = getMinecraftHeadUrl(displayedName);
+                    const placeholderUrl = getPlaceholderHeadUrl(displayedName);
 
+
+                    // NEU: Verwenden von onerror im innerHTML, um den Fallback zu ermöglichen
+                    // Wenn der Minecraft-Kopf (headUrl) fehlschlägt, wird der Placeholder (placeholderUrl) geladen.
                     item.innerHTML = `
                         <span class="font-bold w-1/6 text-left">${rankText}</span>
                         <span class="w-3/6 truncate font-semibold flex items-center space-x-2">
-                            <!-- Minecraft Kopf-Icon -->
-                            <img src="${headUrl}" alt="${displayedName} Kopf" class="mc-head-icon w-6 h-6 flex-shrink-0">
+                            <!-- Minecraft Kopf-Icon mit Fallback -->
+                            <img 
+                                src="${headUrl}" 
+                                alt="${displayedName} Kopf" 
+                                class="mc-head-icon w-6 h-6 flex-shrink-0"
+                                onerror="this.onerror=null; this.src='${placeholderUrl}';"
+                            >
                             <span>${displayedName} ${isCurrentUser ? ' (DU)' : ''}</span>
                         </span>
                         <span class="font-bold w-2/6 text-right">${entry.score} Versuche</span>
