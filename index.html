@@ -32,8 +32,8 @@
             display: block; /* Entfernt zusätzlichen Platz unter dem Bild */
             margin-bottom: 30px; /* ABSTAND GEÄNDERT */
             image-rendering: pixelated; /* Für einen knackigen Pixel-Look */
-            width: 512px; /* NOCHMAL HALBIERT (2048px / 4) */
-            height: 112px; /* NOCHMAL HALBIERT (448px / 4) */
+            width: 512px; /* Auf 512px reduziert */
+            height: 112px; /* Auf 112px reduziert */
             object-fit: contain; /* Stellt sicher, dass das gesamte Bild sichtbar ist */
         }
 
@@ -94,34 +94,22 @@
             padding: 1px;
         }
 
-        /* The Arrow Graphic */
+        /* --- NEUE STYLES FÜR DEN PFEIL-BEREICH --- */
         .mc-arrow-container {
+            /* Zentriert das Bildelement vertikal */
             display: flex;
-            align-items: center;
+            align-items: center; 
+            justify-content: center;
             padding: 0 10px;
         }
-        .mc-arrow {
-            width: 40px;
-            height: 10px;
-            background: linear-gradient(to right, #8b8b8b 50%, #fff 50%);
-            background-size: 2px 100%;
-            border-top: 1px solid #555;
-            border-bottom: 1px solid #fff;
-            position: relative;
+        .crafting-arrow-img {
+            width: 250px; /* VOM BENUTZER GEWÜNSCHTE BREITE */
+            height: 250px; /* VOM BENUTZER GEWÜNSCHTE HÖHE */
+            object-fit: contain;
+            image-rendering: pixelated;
+            display: block;
         }
-        .mc-arrow::after {
-            content: '';
-            position: absolute;
-            right: -6px;
-            top: -2px;
-            width: 0;
-            height: 0;
-            border-top: 7px solid transparent;
-            border-bottom: 7px solid transparent;
-            border-left: 6px solid #8b8b8b;
-            box-shadow: -1px 1px 0 0 #000, 
-                        -1px -1px 0 0 #fff;
-        }
+        /* Die alte CSS-Pfeil-Definition wurde entfernt. */
 
         /* --- Feedback Colors (Applied to the Slot Background) --- */
         .feedback-green {
@@ -225,13 +213,15 @@
                 <span id="targetItemName" class="font-bold text-xl text-orange-700">???</span>
             </div>
 
-            <div class="flex items-start justify-center mb-6">
+            <div class="flex items-start justify-center mb-6" style="align-items: center;">
                 <div id="currentGuessGrid" class="mc-grid">
                     </div>
 
+                <!-- ERSATZ FÜR DEN CSS-PFEIL DURCH DAS BILD -->
                 <div class="mc-arrow-container">
-                    <div class="mc-arrow"></div>
+                    <img id="craftingArrow" src="Pfeil.png" alt="Crafting Arrow" class="crafting-arrow-img">
                 </div>
+                <!-- ENDE ERSATZ -->
 
                 <div id="resultSlot" class="mc-slot">
                     <span id="resultContent" class="text-xl font-bold text-gray-400">?</span>
@@ -554,7 +544,6 @@
                 }
             }
             
-            // hasNonGrayFeedback wird nur noch für interne Logik verwendet, nicht mehr für die Anzeige des Item-Namens.
             let hasNonGrayFeedback = correctCount > 0; 
 
             for (let i = 0; i < 9; i++) {
@@ -572,7 +561,7 @@
                 }
             }
             
-            // Der Item-Name wird NICHT mehr hier aufgedeckt. targetItemNameEl bleibt '???'.
+            // Der Item-Name wird NICHT während des Spiels aufgedeckt.
 
             gameState.attempts.push({ guess: gameState.currentGuess, feedback: feedback });
             renderAttempt(gameState.currentGuess, feedback);
@@ -603,7 +592,7 @@
             submitButton.disabled = true;
             restartButtonEl.classList.remove('hidden');
             
-            // Der Item-Name wird jetzt nur im Modal und hier in der Überschrift angezeigt.
+            // Der Item-Name wird erst bei Spielende aufgedeckt
             targetItemNameEl.textContent = gameState.targetItem.toUpperCase(); 
             modalTargetName.textContent = gameState.targetItem.toUpperCase();
             renderCorrectRecipe(gameState.targetRecipe, correctRecipeDisplay);
