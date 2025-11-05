@@ -303,6 +303,8 @@
                     </button>
                 </div>
                 <p id="nameFeedback" class="text-center text-xs text-green-700 mt-1 hidden">Gespeichert!</p>
+                <!-- NEU: Anzeigen der verbleibenden Änderungen -->
+                <p id="nameChangesRemainingEl" class="text-center text-xs text-white mt-2"></p>
             </div>
             <!-- ENDE NAME EINGABE BEREICH -->
 
@@ -360,6 +362,7 @@
 
         // Konstanten
         const MAX_ATTEMPTS = 6;
+        const MAX_NAME_CHANGES = 3; // NEU: Maximal erlaubte Namensänderungen nach Score-Post
         const CRAFTLE_APP_ID = YOUR_FIREBASE_CONFIG.projectId; 
         const DEFAULT_DISPLAY_NAME = "Anonymer Spieler"; // Fallback-Name
 
@@ -368,7 +371,9 @@
         let craftSound;
         let app, db, auth;
         let userId = null; 
-        let currentDisplayName = DEFAULT_DISPLAY_NAME; // NEU: Speichert den geladenen Namen
+        let currentDisplayName = DEFAULT_DISPLAY_NAME; // Speichert den geladenen Namen
+        let nameChangesRemaining = MAX_NAME_CHANGES; // NEU: Verbleibende Namensänderungen
+
 
         
         // --- Material- und Rezepte-Daten (unverändert) ---
@@ -410,13 +415,12 @@
         const leaderboardErrorEl = document.getElementById('leaderboardError'); 
         const modalOverlay = document.getElementById('modalOverlay');
         const modalRestartButton = document.getElementById('modalRestartButton');
-        const mainGameView = document.getElementById('mainGameView'); // NEU: Hauptansicht
-        const backButton = document.getElementById('backButton'); // NEU: Zurück Button
-        const displayNameInput = document.getElementById('displayNameInput'); // NEU: Name Input
-        const saveDisplayNameButton = document.getElementById('saveDisplayNameButton'); // NEU: Name Speichern Button
-        const nameFeedback = document.getElementById('nameFeedback'); // NEU: Name Feedback
-
-
+        const mainGameView = document.getElementById('mainGameView'); 
+        const backButton = document.getElementById('backButton'); 
+        const displayNameInput = document.getElementById('displayNameInput'); 
+        const saveDisplayNameButton = document.getElementById('saveDisplayNameButton'); 
+        const nameFeedback = document.getElementById('nameFeedback'); 
+        const nameChangesRemainingEl = document.getElementById('nameChangesRemainingEl'); // NEU: Verbleibende Namensänderungen
         
         // --- Firebase Initialisierung und Auth ---
 
@@ -436,7 +440,7 @@
 
                 console.log("Firebase initialized. User ID:", userId);
                 
-                // Lade den gespeicherten Namen, bevor das Spiel startet
+                // Lade den gespeicherten Namen und den Zähler für Namensänderungen, bevor das Spiel startet
                 await loadDisplayName(); 
                 
                 loadingOverlayEl.classList.add('hidden');
@@ -465,7 +469,57 @@
             return new Date().toISOString().split('T')[0];
         }
         
-        // NEU: Lädt den gespeicherten Anzeigenamen des Benutzers
+        // NEU: Hilfsfunktion zur Prüfung, ob der Benutzer heute einen Score im Leaderboard hat
+        async function checkIfUserHasScoreToday() {
+            if (!userId) return false;
+            const dateString = getDateString();
+            // Public Path: /artifacts/{CRAFTLE_APP_ID}/public/data/daily_leaderboards/{YYYY-MM-DD}/scores/{userId}
+            const docRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/public/data/daily_leaderboards/${dateString}/scores`, userId);
+            try {
+                const docSnap = await getDoc(docRef);
+                return docSnap.exists();
+            } catch (error) {
+                console.error("Error checking for user score:", error);
+                return false;
+            }
+        }
+
+        // NEU: Funktion zur Aktualisierung des UI-Status der Namensänderung
+        async function updateNameChangeUI() {
+            if (!displayNameInput || !nameChangesRemainingEl) return;
+            
+            // Setze den aktuellen Namen im Inputfeld
+            displayNameInput.value = currentDisplayName.startsWith('Spieler') ? '' : currentDisplayName;
+            displayNameInput.placeholder = currentDisplayName;
+            
+            const hasScoreToday = await checkIfUserHasScoreToday();
+
+            if (hasScoreToday) {
+                nameChangesRemainingEl.textContent = `Verbleibende Änderungen (bei Score-Update): ${nameChangesRemaining}/${MAX_NAME_CHANGES}`;
+                
+                if (nameChangesRemaining <= 0) {
+                    displayNameInput.disabled = true;
+                    saveDisplayNameButton.disabled = true;
+                    nameChangesRemainingEl.classList.remove('text-white');
+                    nameChangesRemainingEl.classList.add('text-red-500');
+                } else {
+                    displayNameInput.disabled = false;
+                    saveDisplayNameButton.disabled = false;
+                    nameChangesRemainingEl.classList.add('text-white');
+                    nameChangesRemainingEl.classList.remove('text-red-500');
+                }
+            } else {
+                // Wenn kein Score vorhanden ist, ist die Änderung immer erlaubt und kostenlos (keine Begrenzung angezeigt)
+                displayNameInput.disabled = false;
+                saveDisplayNameButton.disabled = false;
+                nameChangesRemainingEl.textContent = 'Namensänderung kostenlos, solange kein Score eingereicht wurde.';
+                nameChangesRemainingEl.classList.remove('text-red-500');
+                nameChangesRemainingEl.classList.add('text-white');
+            }
+        }
+
+
+        // Lädt den gespeicherten Anzeigenamen und den Zähler
         async function loadDisplayName() {
             if (!userId) return;
             
@@ -474,44 +528,112 @@
             
             try {
                 const docSnap = await getDoc(docRef);
-                if (docSnap.exists() && docSnap.data().displayName) {
-                    currentDisplayName = docSnap.data().displayName;
-                    displayNameInput.value = currentDisplayName; // Inputfeld setzen
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // Lade Anzeigenamen
+                    if (data.displayName) {
+                        currentDisplayName = data.displayName;
+                    } else {
+                        currentDisplayName = `Spieler ${userId.substring(0, 4)}`;
+                    }
+                    
+                    // NEU: Lade verbleibende Namensänderungen
+                    if (typeof data.leaderboardNameChangesRemaining === 'number') {
+                        nameChangesRemaining = data.leaderboardNameChangesRemaining;
+                    } else {
+                        // Initialisiere den Zähler beim ersten Laden, falls er fehlt
+                        nameChangesRemaining = MAX_NAME_CHANGES;
+                    }
+                    
                 } else {
-                    // Fallback: Gekürzte ID verwenden, wenn kein Name gesetzt ist
                     currentDisplayName = `Spieler ${userId.substring(0, 4)}`;
-                    displayNameInput.placeholder = currentDisplayName;
+                    nameChangesRemaining = MAX_NAME_CHANGES;
                 }
             } catch (error) {
                 console.warn("Could not load display name:", error);
             }
+            
+            // Aktualisiere UI nach dem Laden
+            updateNameChangeUI();
         }
         
-        // NEU: Speichert den Anzeigenamen des Benutzers
-        async function saveDisplayName(name) {
-            if (!userId || !name || name.length === 0) return;
+        // Speichert den Anzeigenamen des Benutzers
+        async function saveDisplayName(newName) {
+            if (!userId || !newName || newName.length === 0) return;
             
-            const sanitizedName = name.substring(0, 10);
-            currentDisplayName = sanitizedName;
+            const sanitizedName = newName.substring(0, 10);
+            const oldDisplayName = currentDisplayName;
             
-            // Pfad: /artifacts/{CRAFTLE_APP_ID}/users/{userId}/settings/profile
-            const docRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/users/${userId}/settings`, 'profile');
+            // Verhindere Speichern, wenn der Name gleich ist
+            if (sanitizedName === oldDisplayName) {
+                nameFeedback.textContent = 'Name ist bereits gespeichert.';
+                nameFeedback.classList.remove('hidden', 'text-green-700', 'text-red-700');
+                nameFeedback.classList.add('text-gray-200');
+                setTimeout(() => nameFeedback.classList.add('hidden'), 2000);
+                return;
+            }
+
+            const hasScoreToday = await checkIfUserHasScoreToday();
+            let changeAllowed = true;
+            let decrementCounter = false;
             
-            try {
-                await setDoc(docRef, {
+            // 1. Wenn der Benutzer bereits einen Score eingereicht hat, gelten die Limits
+            if (hasScoreToday) {
+                if (nameChangesRemaining > 0) {
+                    decrementCounter = true;
+                } else {
+                    changeAllowed = false;
+                    nameFeedback.textContent = `FEHLER: Limit von ${MAX_NAME_CHANGES} Namensänderungen erreicht.`;
+                    nameFeedback.classList.remove('hidden', 'text-green-700');
+                    nameFeedback.classList.add('text-red-700');
+                    return;
+                }
+            } 
+            // 2. Wenn kein Score eingereicht wurde, ist die Änderung kostenlos (kein Decrement)
+
+            if (changeAllowed) {
+                
+                // 2a. Aktualisiere den privaten Profil-Dokument
+                const profileDocRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/users/${userId}/settings`, 'profile');
+                const updateData = {
                     displayName: sanitizedName,
                     timestamp: serverTimestamp()
-                }, { merge: true });
+                };
                 
-                nameFeedback.textContent = 'Gespeichert!';
-                nameFeedback.classList.remove('hidden');
-                setTimeout(() => nameFeedback.classList.add('hidden'), 2000);
-            } catch (error) {
-                console.error("Error saving display name:", error);
-                nameFeedback.textContent = 'Fehler beim Speichern.';
-                nameFeedback.classList.remove('hidden');
+                if (decrementCounter) {
+                    nameChangesRemaining--;
+                    updateData.leaderboardNameChangesRemaining = nameChangesRemaining;
+                }
+
+                try {
+                    await setDoc(profileDocRef, updateData, { merge: true });
+                    currentDisplayName = sanitizedName; // Globalen Status aktualisieren
+                    
+                    // 2b. Aktualisiere den öffentlichen Leaderboard-Eintrag, falls vorhanden
+                    if (hasScoreToday) {
+                        const dateString = getDateString();
+                        const leaderboardDocRef = doc(db, `artifacts/${CRAFTLE_APP_ID}/public/data/daily_leaderboards/${dateString}/scores`, userId);
+                        await setDoc(leaderboardDocRef, { displayName: sanitizedName }, { merge: true });
+                    }
+                    
+                    nameFeedback.textContent = `Gespeichert! ${decrementCounter ? `(Noch ${nameChangesRemaining} Änderung(en) verfügbar)` : ''}`;
+                    nameFeedback.classList.remove('hidden', 'text-red-700');
+                    nameFeedback.classList.add('text-green-700');
+                    setTimeout(() => nameFeedback.classList.add('hidden'), 3000);
+                    
+                    updateNameChangeUI(); // UI-Status nach dem Speichern aktualisieren
+
+                } catch (error) {
+                    console.error("Error saving display name:", error);
+                    nameFeedback.textContent = 'FEHLER: Fehler beim Speichern des Namens.';
+                    nameFeedback.classList.remove('hidden', 'text-green-700');
+                    nameFeedback.classList.add('text-red-700');
+                    setTimeout(() => nameFeedback.classList.add('hidden'), 3000);
+                }
             }
         }
+
 
         async function getDailyRecipeIndex() {
             const dateString = getDateString();
@@ -586,7 +708,7 @@
             return null;
         }
 
-        // NEU: Speichert das Ergebnis im öffentlichen Leaderboard
+        // Speichert das Ergebnis im öffentlichen Leaderboard
         async function saveLeaderboardResult(attempts) {
             if (!userId || gameState.mode !== 'daily' || !attempts || attempts.length === 0) return;
             
@@ -690,7 +812,7 @@
             updateSubmitButtonState();
         }
 
-        // ... [Restliche Rendering Funktionen (getMaterialImageUrl, createMaterialImageElement, renderCurrentGuessGrid, renderMaterialPicker, renderAttempt, renderCorrectRecipe) bleiben unverändert, da sie nur visuelle Aufgaben haben] ...
+        // ... [Restliche Rendering Funktionen] ...
         
         function getMaterialImageUrl(materialId) {
             const material = materialMap[materialId];
@@ -825,9 +947,12 @@
         }
 
 
-        // NEU: Funktion zum Anzeigen/Laden der Rangliste
+        // Funktion zum Anzeigen/Laden der Rangliste
         async function showLeaderboard() {
-            showLeaderboardView(); // Umschalten der Ansicht
+            showLeaderboardView(); 
+            
+            // UI für Namensänderung aktualisieren (zeigt Zähler und Status an)
+            await updateNameChangeUI(); 
             
             leaderboardListEl.innerHTML = '';
             leaderboardLoadingEl.classList.remove('hidden');
@@ -835,10 +960,6 @@
             
             const dateString = getDateString();
             document.getElementById('leaderboardDate').textContent = dateString;
-            
-            // Setze den aktuellen Namen im Inputfeld
-            displayNameInput.value = currentDisplayName.startsWith('Spieler') ? '' : currentDisplayName;
-            displayNameInput.placeholder = currentDisplayName;
             
             // Public Path: /artifacts/{CRAFTLE_APP_ID}/public/data/daily_leaderboards/{YYYY-MM-DD}/scores
             const collectionRef = collection(db, `artifacts/${CRAFTLE_APP_ID}/public/data/daily_leaderboards/${dateString}/scores`);
@@ -918,9 +1039,9 @@
         randomGameButton.addEventListener('click', () => startCraftle('random'));
         dailyGameButton.addEventListener('click', () => startCraftle('daily'));
         leaderboardButton.addEventListener('click', showLeaderboard);
-        backButton.addEventListener('click', hideLeaderboard); // NEU: Zurück-Button
+        backButton.addEventListener('click', hideLeaderboard); 
         
-        saveDisplayNameButton.addEventListener('click', () => { // NEU: Speichern des Namens
+        saveDisplayNameButton.addEventListener('click', () => { 
             saveDisplayName(displayNameInput.value.trim());
         });
         
@@ -1006,13 +1127,11 @@
             if (gameState.mode === 'daily') {
                 saveDailyAttempts(gameState.attempts, won);
                 if (won) {
-                    // NEU: Speichere den Score im Leaderboard
+                    // Speichere den Score im Leaderboard
                     saveLeaderboardResult(gameState.attempts);
                 }
             }
             
-            // ... [Anzeige des Modals]
-            // ... [Restlicher Code der endGame-Funktion]
             targetItemNameEl.textContent = gameState.targetItem.toUpperCase(); 
             document.getElementById('modalTitle').textContent = won ? "GEWONNEN!" : "SPIEL VORBEI!";
             document.getElementById('modalMessage').textContent = won 
