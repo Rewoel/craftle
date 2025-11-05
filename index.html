@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minecraft Craftle: Crafting Table</title>
-    <!-- Lade Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lade die Pixel-Schriftart (Press Start 2P) --><link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+
+<script src="https://cdn.tailwindcss.com"></script>
+    
+
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
         /* --- Minecraft UI Basis Styling --- */
@@ -29,10 +33,10 @@
             max-width: 100%; /* Stellt sicher, dass es nicht über den Bildschirm hinausgeht */
             height: auto; /* Behält das Seitenverhältnis bei */
             display: block; /* Entfernt zusätzlichen Platz unter dem Bild */
-            margin-bottom: 30px; /* Abstand zum Rest des Inhalts */
+            margin-bottom: 20px; /* Abstand zum Rest des Inhalts */
             image-rendering: pixelated; /* Für einen knackigen Pixel-Look */
-            width: 512px; /* HALB so groß wie 2048px */
-            height: 112px; /* HALB so groß wie 448px */
+            width: 1024px; /* HALB so groß wie 2048px */
+            height: 224px; /* HALB so groß wie 448px */
             object-fit: contain; /* Stellt sicher, dass das gesamte Bild sichtbar ist */
         }
 
@@ -213,50 +217,78 @@
 </head>
 <body class="p-4 sm:p-8">
 
-    <!-- Ihr Titelbild wird hier geladen --><img src="titel.png" alt="Minecraft Craftle" class="game-title-image" width="1024" height="224">
+    
+
+<img src="titel.png" alt="Minecraft Craftle" class="game-title-image" width="1024" height="224">
 
     <div class="container">
         
-        <!-- UI Card/Window Start --><div class="mc-window shadow-2xl">
+        
+
+<div class="mc-window shadow-2xl">
             
-            <!-- Target Item Info (Titled like the Inventory Title) --><div class="mc-title mb-4">
+            
+
+<div class="mc-title mb-4">
                 <span class="text-base text-gray-700">CRAFTING FÜR:</span> 
                 <span id="targetItemName" class="font-bold text-xl text-orange-700">???</span>
             </div>
 
-            <!-- Crafting Area: 3x3 Grid, Arrow, and Result Slot --><div class="flex items-start justify-center mb-6">
-                <!-- 3x3 Crafting Grid Container --><div id="currentGuessGrid" class="mc-grid">
-                    <!-- Grid slots are generated here --></div>
+            
 
-                <!-- Arrow --><div class="mc-arrow-container">
+<div class="flex items-start justify-center mb-6">
+                
+
+<div id="currentGuessGrid" class="mc-grid">
+                    
+
+</div>
+
+                
+
+<div class="mc-arrow-container">
                     <div class="mc-arrow"></div>
                 </div>
 
-                <!-- Result Slot --><div id="resultSlot" class="mc-slot">
+                
+
+<div id="resultSlot" class="mc-slot">
                     <span id="resultContent" class="text-xl font-bold text-gray-400">?</span>
                 </div>
             </div>
 
-            <!-- Material Picker Area (Inventory Section) --><div class="mc-title mt-4">MATERIALIEN (INVENTORY)</div>
-            <div id="materialPicker" class="grid mc-inventory-grid">
-                <!-- Material buttons are generated here --></div>
+            
 
-            <!-- Aktions-Buttons --><div class="flex flex-col space-y-4 mt-6">
+<div class="mc-title mt-4">MATERIALIEN (INVENTORY)</div>
+            <div id="materialPicker" class="grid mc-inventory-grid">
+                
+
+</div>
+
+            
+
+<div class="flex flex-col space-y-4 mt-6">
                 <button id="submitButton" class="mc-button text-lg" disabled>
                     REZEPT PRÜFEN (0/6)
                 </button>
             </div>
             
-            <!-- Bisherige Versuche (Feedback) --><div class="mc-title mt-6 text-xl">BISHERIGE VERSUCHE:</div>
+            
+
+<div class="mc-title mt-6 text-xl">BISHERIGE VERSUCHE:</div>
             <div id="attemptsContainer" class="space-y-3 p-2 border border-gray-500 rounded-sm">
-                <!-- Previous attempts will be displayed here --></div>
+                
+
+</div>
 
             <button id="restartButton" class="mc-button mt-4 w-full hidden">
                 NEUES SPIEL STARTEN
             </button>
 
         </div> 
-        <!-- UI Card/Window End --><!-- Instructions (Outside the Main Window for simplicity) --><div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white">
+        
+
+<div id="instructions" class="bg-gray-700 p-4 rounded-lg shadow-xl mt-6 text-white">
             <h2 class="font-bold mb-2">ANLEITUNG</h2>
             <ul class="list-disc list-inside space-y-1">
                 <li>WÄHLE UNTEN EIN MATERIAL (ODER "LEER") AUS UND PLATZIERE ES IN DAS 3X3-GITTER.</li>
@@ -267,7 +299,9 @@
 
     </div>
 
-    <!-- Modal für Spielende/Sieg (Styled as a Minecraft dialog) --><div id="modalOverlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    
+
+<div id="modalOverlay" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div id="modalContent" class="mc-window p-8 w-11/12 max-w-md text-center border-4 border-black">
             <h3 id="modalTitle" class="text-3xl font-bold mb-4 text-orange-700 text-shadow-lg"></h3>
             <p id="modalMessage" class="mb-6 text-lg"></p>
@@ -286,6 +320,16 @@
         // --- Globale Variablen und Konfiguration ---
         const MAX_ATTEMPTS = 6;
         let gameState = {};
+        
+        // Audio-Objekt initialisieren
+        let craftSound;
+        
+        // Initialisiere den Sound, sobald das Fenster geladen ist
+        window.onload = function() {
+            craftSound = new Audio('craft.mp3');
+            initGame();
+        };
+
 
         const materialMap = {
             // Die Dateinamen und Größen entsprechen den Benutzerangaben
@@ -361,10 +405,8 @@
 
         // --- Initialisierung ---
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initGame();
-        });
-
+        // Der DOMContentLoaded-Listener wurde durch window.onload ersetzt, um sicherzustellen, dass das Audio-Objekt vor initGame erstellt wird.
+        
         function initGame() {
             const randomIndex = Math.floor(Math.random() * recipes.length);
             const target = recipes[randomIndex];
@@ -523,6 +565,13 @@
 
         function checkRecipe() {
             if (gameState.gameOver || submitButton.disabled) return;
+
+            // Spiele den Crafting-Sound ab
+            if (craftSound) {
+                // Setze die Zeit auf 0, um den Sound erneut abspielen zu können, auch wenn er noch läuft
+                craftSound.currentTime = 0; 
+                craftSound.play().catch(e => console.error("Error playing craft sound:", e));
+            }
 
             const guess = [...gameState.currentGuess];
             const target = [...gameState.targetRecipe];
