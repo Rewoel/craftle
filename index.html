@@ -499,7 +499,7 @@
                         
                         randomGameButton.classList.remove('hidden');
                         dailyGameButton.classList.add('hidden');
-                        return;
+                        return; // WICHTIG: Das Spiel nicht zurücksetzen, wenn es bereits beendet ist.
                     }
                 }
                 
@@ -692,12 +692,10 @@
         submitButton.addEventListener('click', checkRecipe);
         randomGameButton.addEventListener('click', () => startCraftle('random'));
         dailyGameButton.addEventListener('click', () => startCraftle('daily'));
+        
+        // BUG FIX: Nach Spielende (auch Daily) soll der Restart-Button immer ein frisches ZUFÄLLIGES Spiel starten.
         modalRestartButton.addEventListener('click', () => {
-            if (gameState.mode === 'daily') {
-                startCraftle('daily');
-            } else {
-                startCraftle('random');
-            }
+             startCraftle('random');
         });
 
 
@@ -787,7 +785,19 @@
                 modalMessage.textContent = `HERZLICHEN GLÜCKWUNSCH! DU HAST DAS REZEPT FÜR DIE ${gameState.targetItem.toUpperCase()} IN ${gameState.attemptCount} VERSUCHEN ERRATEN.`;
                 modalTitle.classList.remove('text-red-700');
                 modalTitle.classList.add('text-green-700');
-                if (craftSound) { craftSound.currentTime = 0; craftSound.play().catch(e => console.error("Error playing craft sound:", e)); }
+                
+                // Audio-Fix: Behandeln von Wiedergabefehlern in eingeschränkten Umgebungen
+                if (craftSound) { 
+                    craftSound.currentTime = 0; 
+                    craftSound.play().catch(e => {
+                        // Ignoriere typische Fehler in eingeschränkten Umgebungen (wie iFrames)
+                        if (e.name === 'NotAllowedError' || e.message.includes('The operation is not supported')) {
+                            console.warn("WARNUNG: Audiowiedergabe blockiert oder wird in dieser Umgebung nicht unterstützt.");
+                        } else {
+                            console.error("Fehler beim Abspielen des Craft-Sounds:", e);
+                        }
+                    }); 
+                }
 
             } else {
                 modalTitle.textContent = "SPIEL VORBEI!";
