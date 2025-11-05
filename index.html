@@ -208,6 +208,16 @@
         .mc-input::placeholder {
             color: #8b8b8b;
         }
+
+        /* NEU: Minecraft Head Styling für Rangliste und Input */
+        .mc-head-icon {
+            width: 24px;
+            height: 24px;
+            image-rendering: pixelated; /* Für den Minecraft-Look */
+            border: 2px solid #1f1f1f;
+            border-radius: 0;
+            box-shadow: 1px 1px 0 0 #000, -1px -1px 0 0 #fff; 
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -296,14 +306,15 @@
             <!-- NAME EINGABE BEREICH -->
             <div class="p-3 mb-4 bg-gray-500/50 rounded-sm">
                 <p class="mc-title mb-2 text-center text-white text-xs">DEIN SPIELERNAME (max. 10 Zeichen)</p>
-                <div class="flex space-x-2">
+                <div class="flex space-x-2 items-center">
+                    <!-- NEU: Spieler-Kopf-Icon für den aktuellen Benutzer -->
+                    <img id="currentUserHead" src="" alt="Dein Kopf" class="mc-head-icon flex-shrink-0" style="width: 32px; height: 32px;">
                     <input type="text" id="displayNameInput" class="mc-input w-full" maxlength="10" placeholder="Max Mustermann">
                     <button id="saveDisplayNameButton" class="mc-button px-4 py-2 flex-shrink-0">
                         SPEICHERN
                     </button>
                 </div>
-                <p id="nameFeedback" class="text-center text-xs text-green-700 mt-1 hidden">Gespeichert!</p>
-                <!-- NEU: Anzeigen der verbleibenden Änderungen -->
+                <p id="nameFeedback" class="text-center text-xs text-green-700 mt-1 hidden"></p>
                 <p id="nameChangesRemainingEl" class="text-center text-xs text-white mt-2"></p>
             </div>
             <!-- ENDE NAME EINGABE BEREICH -->
@@ -362,7 +373,7 @@
 
         // Konstanten
         const MAX_ATTEMPTS = 6;
-        const MAX_NAME_CHANGES = 3; // NEU: Maximal erlaubte Namensänderungen nach Score-Post
+        const MAX_NAME_CHANGES = 3; 
         const CRAFTLE_APP_ID = YOUR_FIREBASE_CONFIG.projectId; 
         const DEFAULT_DISPLAY_NAME = "Anonymer Spieler"; // Fallback-Name
 
@@ -372,7 +383,7 @@
         let app, db, auth;
         let userId = null; 
         let currentDisplayName = DEFAULT_DISPLAY_NAME; // Speichert den geladenen Namen
-        let nameChangesRemaining = MAX_NAME_CHANGES; // NEU: Verbleibende Namensänderungen
+        let nameChangesRemaining = MAX_NAME_CHANGES; // Verbleibende Namensänderungen
 
 
         
@@ -400,7 +411,7 @@
 
 
         // --- DOM-Elemente ---
-        const loadingOverlayEl = document.getElementById('loadingOverlay'); // FIX: Fehlende Definition hinzugefügt
+        const loadingOverlayEl = document.getElementById('loadingOverlay'); 
         const targetItemNameEl = document.getElementById('targetItemName');
         const currentGuessGridEl = document.getElementById('currentGuessGrid');
         const materialPickerEl = document.getElementById('materialPicker');
@@ -420,8 +431,27 @@
         const displayNameInput = document.getElementById('displayNameInput'); 
         const saveDisplayNameButton = document.getElementById('saveDisplayNameButton'); 
         const nameFeedback = document.getElementById('nameFeedback'); 
-        const nameChangesRemainingEl = document.getElementById('nameChangesRemainingEl'); // NEU: Verbleibende Namensänderungen
+        const nameChangesRemainingEl = document.getElementById('nameChangesRemainingEl'); 
+        const currentUserHeadEl = document.getElementById('currentUserHead'); // NEU: Kopf des aktuellen Benutzers
         
+        // --- Minecraft Head Generator ---
+        const STEVE_UUID = '8667ba71b85a4004af54457a9734eed7'; // Fallback Steve Skin
+
+        /**
+         * Gibt die URL für den Minecraft-Kopf des Spielers zurück.
+         * @param {string} displayName 
+         * @returns {string} Bild-URL
+         */
+        function getMinecraftHeadUrl(displayName) {
+            // Wenn der Name der anonyme Standardname ist, verwende Steve als Fallback
+            if (displayName.startsWith('Spieler ') || displayName === DEFAULT_DISPLAY_NAME) {
+                return `https://crafatar.com/avatars/${STEVE_UUID}?size=32&overlay`;
+            }
+            // Ansonsten versuche, den Kopf anhand des Namens abzurufen
+            return `https://crafatar.com/avatars/${displayName}?size=32&overlay`;
+        }
+
+
         // --- Firebase Initialisierung und Auth ---
 
         async function initFirebaseAndAuth() {
@@ -469,7 +499,6 @@
             return new Date().toISOString().split('T')[0];
         }
         
-        // NEU: Hilfsfunktion zur Prüfung, ob der Benutzer heute einen Score im Leaderboard hat
         async function checkIfUserHasScoreToday() {
             if (!userId) return false;
             const dateString = getDateString();
@@ -484,13 +513,16 @@
             }
         }
 
-        // NEU: Funktion zur Aktualisierung des UI-Status der Namensänderung
+        // Aktualisiert den UI-Status der Namensänderung
         async function updateNameChangeUI() {
             if (!displayNameInput || !nameChangesRemainingEl) return;
             
             // Setze den aktuellen Namen im Inputfeld
             displayNameInput.value = currentDisplayName.startsWith('Spieler') ? '' : currentDisplayName;
             displayNameInput.placeholder = currentDisplayName;
+            
+            // NEU: Setze das Minecraft Head Icon
+            currentUserHeadEl.src = getMinecraftHeadUrl(currentDisplayName);
             
             const hasScoreToday = await checkIfUserHasScoreToday();
 
@@ -538,7 +570,7 @@
                         currentDisplayName = `Spieler ${userId.substring(0, 4)}`;
                     }
                     
-                    // NEU: Lade verbleibende Namensänderungen
+                    // Lade verbleibende Namensänderungen
                     if (typeof data.leaderboardNameChangesRemaining === 'number') {
                         nameChangesRemaining = data.leaderboardNameChangesRemaining;
                     } else {
@@ -992,11 +1024,16 @@
                     
                     // Name für die Anzeige: Entweder den gespeicherten Namen oder den Fallback
                     const displayedName = entry.displayName || `Spieler ${entry.userId.substring(0, 4)}`;
+                    
+                    // NEU: Hole die URL für den Kopf
+                    const headUrl = getMinecraftHeadUrl(displayedName);
 
                     item.innerHTML = `
                         <span class="font-bold w-1/6 text-left">${rankText}</span>
-                        <span class="w-3/6 truncate font-semibold">
-                            ${displayedName} ${isCurrentUser ? ' (DU)' : ''}
+                        <span class="w-3/6 truncate font-semibold flex items-center space-x-2">
+                            <!-- Minecraft Kopf-Icon -->
+                            <img src="${headUrl}" alt="${displayedName} Kopf" class="mc-head-icon w-6 h-6 flex-shrink-0">
+                            <span>${displayedName} ${isCurrentUser ? ' (DU)' : ''}</span>
                         </span>
                         <span class="font-bold w-2/6 text-right">${entry.score} Versuche</span>
                     `;
@@ -1031,7 +1068,7 @@
 
         function updateSubmitButtonState() {
             const isAnyMaterialPlaced = gameState.currentGuess.some(id => id !== 'E');
-            submitButton.disabled = !isAnyMaterialPlaced || gameState.gameOver;
+            submitButton.disabled = gameState.gameOver;
             submitButton.textContent = `REZEPT PRÜFEN (${gameState.attemptCount}/${MAX_ATTEMPTS})`;
         }
 
@@ -1045,7 +1082,7 @@
             saveDisplayName(displayNameInput.value.trim());
         });
         
-        // BUG FIX: Nach Spielende (auch Daily) soll der Restart-Button immer ein frisches ZUFÄLLIGES Spiel starten.
+        // Nach Spielende (auch Daily) soll der Restart-Button immer ein frisches ZUFÄLLIGES Spiel starten.
         modalRestartButton.addEventListener('click', () => {
              startCraftle('random');
         });
